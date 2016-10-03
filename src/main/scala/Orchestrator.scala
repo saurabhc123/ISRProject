@@ -1,7 +1,8 @@
 
-import org.apache.spark.mllib.evaluation.{MulticlassMetrics, BinaryClassificationMetrics}
-import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.mllib.regression.{GeneralizedLinearModel, GeneralizedLinearAlgorithm, LabeledPoint}
+package scala
+
+import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MulticlassMetrics}
+import org.apache.spark.mllib.regression.{GeneralizedLinearAlgorithm, GeneralizedLinearModel, LabeledPoint}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -11,21 +12,16 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object Orchestrator {
 
-  def CreateLabeledPointFromInputLine(line: String): LabeledPoint = {
-    //ToDo:Change the stub to actual implementation later
-    val pos = LabeledPoint(1.0, Vectors.dense(1.0, 0.0, 3.0))
-    return pos
-  }
+  var _inputFile = ""
 
   def train(inputFilename: String, args: Array[String]): Unit = {
-
+    _inputFile = inputFilename
     val conf = new SparkConf().setAppName("SparkGrep").setMaster(args(0))
     val sc = new SparkContext(conf)
-
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
-
-    val trainingData = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line))
+    val fpmPatterns = FpGenerate.generateFrequentPatterns(inputFilename, sc)
+    val trainingData = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, fpmPatterns))
 
     //Divide the training data into training and test.
     val positiveSamples = trainingData.filter(point => point.label == 1).randomSplit(Array(0.8, 0.2))
@@ -41,17 +37,32 @@ object Orchestrator {
     val trainingSplit = trainingSpamSplit ++ trainingHamSplit
     val testSplit = testSpamSplit ++ testHamSplit
 
+
+
     val logisticWithBfgs = Classifier.getAlgorithm("logbfgs", 100, Double.NaN, 0.001)
     val svmWithSGD = Classifier.getAlgorithm("svm", 100, 1, 0.001)
     val logisticWithBfgsPredictsActuals=runClassification(logisticWithBfgs, trainingSplit, testSplit)
-    //val svmWithSGDPredictsActuals=runClassification(svmWithSGD, trainingSplit, testSplit)
+    val svmWithSGDPredictsActuals=runClassification(svmWithSGD, trainingSplit, testSplit)
 
     //Test the accuracy of the classifier using the test data
     calculateMetrics(logisticWithBfgsPredictsActuals, "Logistic Regression with BFGS")
+    calculateMetrics(svmWithSGDPredictsActuals, "Logistic Regression with SVM")
 
     //Save the model into a file on HDFS.
   }
 
+  def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
+    //ToDo:Change the stub to actual implementation later
+    val delimiter = '|'
+    val values = line.split(delimiter)
+    val label = values(0)
+    val documentBody = values(1)
+    val fg = new FeatureGenerator(fpmPatterns)
+    val features = fg.getFeatures("fpm", documentBody)
+    val lp = LabeledPoint(label.toDouble, features)
+    //val lp = LabeledPoint(1.0, Vectors.dense(1.0, 0.0, 3.0))
+    return lp
+  }
 
   def runClassification(algorithm: GeneralizedLinearAlgorithm[_ <: GeneralizedLinearModel], trainingData: RDD[LabeledPoint], testData: RDD[LabeledPoint]): RDD[(Double, Double)] = {
     //Train the classifier using the training data
@@ -71,7 +82,9 @@ object Orchestrator {
      //println(s"Accuracy $accuracy")
      val metrics = new MulticlassMetrics(predictsAndActuals)
      val f1=metrics.fMeasure
+     val evalCount = predictsAndActuals.count()
      println(s"F1 $f1")
+     println(s"Number of test records: $evalCount")
      println(s"Precision : ${metrics.precision}")
      println(s"Confusion Matrix \n${metrics.confusionMatrix}")
      println(s"************** ending metrics for $algorithm *****************")

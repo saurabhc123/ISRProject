@@ -8,7 +8,8 @@ object SparkGrep {
 			System.exit(1)
 		}
 
-		FpGenerate.generateFrequentPatterns("data/fpwords.txt", args)
+		Orchestrator.train("data/issac.txt", args)
+		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
 		//SparkUtilities.countWords(args)
 
 	}
