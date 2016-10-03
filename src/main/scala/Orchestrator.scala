@@ -1,6 +1,7 @@
 
 package scala
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MulticlassMetrics}
 import org.apache.spark.mllib.regression.{GeneralizedLinearAlgorithm, GeneralizedLinearModel, LabeledPoint}
 import org.apache.spark.rdd.RDD
@@ -12,12 +13,12 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object Orchestrator {
 
-  var _inputFile = ""
-
-  def train(inputFilename: String, args: Array[String]): Unit = {
-    _inputFile = inputFilename
+  def train(args: Array[String]): Unit = {
+    val inputFilename = args(1)
     val conf = new SparkConf().setAppName("SparkGrep").setMaster(args(0))
     val sc = new SparkContext(conf)
+    val rootLogger = Logger.getRootLogger()
+    rootLogger.setLevel(Level.ERROR)
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
     val fpmPatterns = FpGenerate.generateFrequentPatterns(inputFilename, sc)
@@ -52,7 +53,6 @@ object Orchestrator {
   }
 
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
-    //ToDo:Change the stub to actual implementation later
     val delimiter = '|'
     val values = line.split(delimiter)
     val label = values(0)
@@ -77,7 +77,7 @@ object Orchestrator {
   def calculateMetrics(predictsAndActuals: RDD[(Double, Double)], algorithm: String) {
      val accuracy = 1.0*predictsAndActuals.filter(predActs => predActs._1 == predActs._2).count() / predictsAndActuals.count()
      val binMetrics = new BinaryClassificationMetrics(predictsAndActuals)
-     println(s"************** Printing metrics for $algorithm ***************")
+     println(s"\n************** Printing metrics for $algorithm ***************")
      println(s"Area under ROC ${binMetrics.areaUnderROC}")
      //println(s"Accuracy $accuracy")
      val metrics = new MulticlassMetrics(predictsAndActuals)
@@ -87,7 +87,7 @@ object Orchestrator {
      println(s"Number of test records: $evalCount")
      println(s"Precision : ${metrics.precision}")
      println(s"Confusion Matrix \n${metrics.confusionMatrix}")
-     println(s"************** ending metrics for $algorithm *****************")
+     println(s"************** ending metrics for $algorithm *****************\n")
      }
 
   def getModel():Unit = {
