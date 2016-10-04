@@ -25,18 +25,18 @@ object Orchestrator {
     val trainingData = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, fpmPatterns))
 
     //Divide the training data into training and test.
-    val positiveSamples = trainingData.filter(point => point.label == 1).randomSplit(Array(0.8, 0.2))
-    val negativeSamples = trainingData.filter(point => point.label == 0).randomSplit(Array(0.8, 0.2))
+    val positiveSamples = trainingData.filter(point => point.label == 1).randomSplit(Array(0.6, 0.4))
+    val negativeSamples = trainingData.filter(point => point.label == 0).randomSplit(Array(0.6, 0.4))
 
     println ("Positive count:"+(positiveSamples(0).count)+"::"+(positiveSamples(1).count))
     println ("Negative count:"+(negativeSamples(0).count)+"::"+(negativeSamples(1).count))
-    val trainingSpamSplit = positiveSamples(0)
-    val testSpamSplit = positiveSamples(1)
-    val trainingHamSplit = negativeSamples(0)
-    val testHamSplit = negativeSamples(1)
+    val trainingPositiveSplit = positiveSamples(0)
+    val testPositiveSplit = positiveSamples(1)
+    val trainingNegativeSplit = negativeSamples(0)
+    val testNegativeSplit = negativeSamples(1)
 
-    val trainingSplit = trainingSpamSplit ++ trainingHamSplit
-    val testSplit = testSpamSplit ++ testHamSplit
+    val trainingSplit = trainingPositiveSplit ++ trainingNegativeSplit
+    val testSplit = testPositiveSplit ++ testNegativeSplit
 
 
 
@@ -60,7 +60,6 @@ object Orchestrator {
     val fg = new FeatureGenerator(fpmPatterns)
     val features = fg.getFeatures("fpm", documentBody)
     val lp = LabeledPoint(label.toDouble, features)
-    //val lp = LabeledPoint(1.0, Vectors.dense(1.0, 0.0, 3.0))
     return lp
   }
 
