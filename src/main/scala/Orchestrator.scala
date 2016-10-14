@@ -51,7 +51,7 @@ object Orchestrator {
 
     //Test the accuracy of the classifier using the test data
     calculateMetrics(logisticWithBfgsPredictsActuals, "Logistic Regression with BFGS")
-    calculateMetrics(svmWithSGDPredictsActuals, "Logistic Regression with SVM")
+    calculateMetrics(svmWithSGDPredictsActuals, "Classification with SVM")
 
     //Save the model into a file on HDFS.
   }

@@ -13,7 +13,7 @@ class Greeter(message: RDD[Array[String]]) {
 class FeatureGenerator(message: RDD[Array[String]]) {
 
   val fpmWords = message
-  val tweetLength:Int = 140
+  val tweetLength:Int = 70
 
 
 
@@ -50,7 +50,7 @@ class FeatureGenerator(message: RDD[Array[String]]) {
 
   def PadFeatureArray(features: Array[Double]): Array[Double] = {
 
-    val paddedFeatures = new Array[Double](140)
+    val paddedFeatures = new Array[Double](tweetLength)
     for (i <- 1 to features.length) {
         paddedFeatures(i - 1) = features(i -1)
     }
