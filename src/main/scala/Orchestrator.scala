@@ -68,7 +68,7 @@ object Orchestrator {
   }*/
 
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
-    val delimiter = '|'
+    val delimiter = ';'
     val values = line.split(delimiter)
     val label = values(0)
     val documentBody = values(1)

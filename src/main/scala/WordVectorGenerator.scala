@@ -12,13 +12,14 @@ import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
 object WordVectorGenerator {
 
   var _classModel : Word2VecModel = null
+  val _word2VecModelLength = 300
 
   def generateWordVector(inputFilename: String, sc: SparkContext):Unit = {
     val input = sc.textFile(inputFilename).map(line => line.split(" ").toSeq)
 
     val word2vec = new Word2Vec()
-
-    var model = word2vec.fit(input)
+    word2vec.setWindowSize(_word2VecModelLength)
+    val model = word2vec.fit(input)
     _classModel = model
 
     /*val synonyms = model.findSynonyms("loan", 5)
@@ -43,7 +44,7 @@ object WordVectorGenerator {
       case _ => sum = 0.0
     }
 
-    return sum
+    return sum/_word2VecModelLength
   }
 
 }
