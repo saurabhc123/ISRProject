@@ -17,6 +17,8 @@ object FpGenerate {
     val data = sc.textFile(inputFilename)
     val transactions: RDD[Array[String]] = data.map(line => line.trim.split(' ').toList.distinct.toArray)
 
+    return transactions
+
     val fpg = new FPGrowth()
       .setMinSupport(0.3)
       .setNumPartitions(10)

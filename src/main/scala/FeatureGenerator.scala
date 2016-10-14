@@ -13,7 +13,10 @@ class Greeter(message: RDD[Array[String]]) {
 class FeatureGenerator(message: RDD[Array[String]]) {
 
   val fpmWords = message
-  
+  val tweetLength:Int = 140
+
+
+
   def getFeatures(featureType: String, documentBody: String) = featureType match {
     case "fpm" => {
       //Load the FPM List of Lists
@@ -38,6 +41,20 @@ class FeatureGenerator(message: RDD[Array[String]]) {
     case "tfidf" => {
       Vectors.dense(1.0, 0.0, 3.0)
     }
+    case "word2vec" => {
+        val features = documentBody.split(" ").map(word => WordVectorGenerator.getAveragedWordVector(word))
+        Vectors.dense(PadFeatureArray(features))
+    }
+  }
+
+
+  def PadFeatureArray(features: Array[Double]): Array[Double] = {
+
+    val paddedFeatures = new Array[Double](140)
+    for (i <- 1 to features.length) {
+        paddedFeatures(i - 1) = features(i -1)
+    }
+    return paddedFeatures
   }
 
 }

@@ -13,6 +13,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object Orchestrator {
 
+
+
   def train(args: Array[String]): Unit = {
     val inputFilename = args(1)
     val conf = new SparkConf().setAppName("SparkGrep").setMaster(args(0))
@@ -22,6 +24,8 @@ object Orchestrator {
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
     val fpmPatterns = FpGenerate.generateFrequentPatterns(inputFilename, sc)
+    WordVectorGenerator.generateWordVector(inputFilename, sc)
+    //val trainingData = trainingFileInput.map(line => CreateLabeledPointFromAveragedWordVector(line))
     val trainingData = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, fpmPatterns))
 
     //Divide the training data into training and test.
@@ -52,14 +56,27 @@ object Orchestrator {
     //Save the model into a file on HDFS.
   }
 
+ /* def CreateLabeledPointFromAveragedWordVector(line: String): LabeledPoint  = {
+    val delimiter = '|'
+    val values = line.split(delimiter)
+    val label = values(0)
+    val documentBody = values(1)
+    val fg = new WordVectorGenerator(fpmPatterns)
+    val features = fg.getFeatures("fpm", documentBody)
+    val lp = LabeledPoint(label.toDouble, features)
+    return lp
+  }*/
+
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
     val delimiter = '|'
     val values = line.split(delimiter)
     val label = values(0)
     val documentBody = values(1)
-    val fg = new FeatureGenerator(fpmPatterns)
-    val features = fg.getFeatures("fpm", documentBody)
+    val fg = new FeatureGenerator(fpmPatterns)//word2vec
+    val features = fg.getFeatures("word2vec", documentBody)
+    //val features = fg.getFeatures("fpm", documentBody)
     val lp = LabeledPoint(label.toDouble, features)
+    //println(s"$line $lp")
     return lp
   }
 

@@ -5,5 +5,6 @@ package scala
  *
  */
 object Hello extends App {
-  println("Hello World!")
+  val result = MathTest.AddTwoNumbers(5 , 6)
+  println("Hello World!" + result)
 }
