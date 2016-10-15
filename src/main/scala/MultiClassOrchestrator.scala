@@ -2,6 +2,7 @@
 package scala
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MulticlassMetrics}
 import org.apache.spark.mllib.regression.{GeneralizedLinearAlgorithm, GeneralizedLinearModel, LabeledPoint}
 import org.apache.spark.rdd.RDD
@@ -11,7 +12,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  * Created by saur6410 on 10/2/16.
  */
 
-object Orchestrator {
+object MultiClassOrchestrator {
 
 
 
@@ -26,40 +27,42 @@ object Orchestrator {
     //val fpmPatterns = FpGenerate.generateFrequentPatterns(inputFilename, sc)
     WordVectorGenerator.generateWordVector(inputFilename, sc)
     //val trainingData = trainingFileInput.map(line => CreateLabeledPointFromAveragedWordVector(line))
-    val trainingData = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, null))
+    val data = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, null))
 
-    //Divide the training data into training and test.
-    val positiveSamples = trainingData.filter(point => point.label == 1).randomSplit(Array(0.6, 0.4))
-    val negativeSamples = trainingData.filter(point => point.label == 0).randomSplit(Array(0.6, 0.4))
-
-    println ("Positive count:"+(positiveSamples(0).count)+"::"+(positiveSamples(1).count))
-    println ("Negative count:"+(negativeSamples(0).count)+"::"+(negativeSamples(1).count))
-    val trainingPositiveSplit = positiveSamples(0)
-    val testPositiveSplit = positiveSamples(1)
-    val trainingNegativeSplit = negativeSamples(0)
-    val testNegativeSplit = negativeSamples(1)
-
-    val trainingSplit = trainingPositiveSplit ++ trainingNegativeSplit
-    val testSplit = testPositiveSplit ++ testNegativeSplit
+    // Split data into training (60%) and test (40%).
+    val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
+    val training = splits(0).cache()
+    val test = splits(1)
 
 
+    // Run training algorithm to build the model
+    val model = new LogisticRegressionWithLBFGS()
+      .setNumClasses(3)
+      .run(training)
 
-    val logisticWithBfgs = Classifier.getAlgorithm("logbfgs", 100, Double.NaN, 0.001)
-    val svmWithSGD = Classifier.getAlgorithm("svm", 100, 1, 0.001)
-    val logisticWithBfgsPredictsActuals=runClassification(logisticWithBfgs, trainingSplit, testSplit)
-    val svmWithSGDPredictsActuals=runClassification(svmWithSGD, trainingSplit, testSplit)
+    // Compute raw scores on the test set.
+    val predictionAndLabels = test.map { case LabeledPoint(label, features) =>
+      val prediction = model.predict(features)
+      (prediction, label)
+    }
 
-    //Test the accuracy of the classifier using the test data
-    calculateMetrics(logisticWithBfgsPredictsActuals, "Logistic Regression with BFGS")
-    calculateMetrics(svmWithSGDPredictsActuals, "Classification with SVM")
+    // Get evaluation metrics.
+    val metrics = new MulticlassMetrics(predictionAndLabels)
+    val accuracy = metrics.accuracy
+    val precision = metrics.weightedPrecision
+    val recall = metrics.weightedRecall
+    println(s"Accuracy = $accuracy")
+    println(s"Weighted Precision = $precision")
+    println(s"Weighted Recall = $recall")
 
     //Save the model into a file on HDFS.
   }
 
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
-    val delimiter = ';'
+    val delimiter = '|'
     val values = line.split(delimiter)
     val label = values(0)
+    //println(s"label: $label")
     val documentBody = values(1)
     val fg = new FeatureGenerator(fpmPatterns)//word2vec
     val features = fg.getFeatures("word2vec", documentBody)
