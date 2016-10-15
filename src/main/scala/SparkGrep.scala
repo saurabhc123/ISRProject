@@ -13,7 +13,7 @@ object SparkGrep {
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
 		//SparkUtilities.countWords(args)
 		//WordVectorGenerator.generateWordVector("data/issac.txt", args)
-
+		//CleanTweet.clean(args,"data/multi_class_lem")
 	}
 
 }

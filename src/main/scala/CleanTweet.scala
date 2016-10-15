@@ -1,0 +1,98 @@
+package scala
+import java.io.PrintWriter
+import java.util.Properties
+
+import edu.stanford.nlp.ling.CoreAnnotations.{LemmaAnnotation, SentencesAnnotation, TokensAnnotation}
+import edu.stanford.nlp.pipeline.{Annotation, StanfordCoreNLP}
+import org.apache.log4j.{Level, Logger}
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.rdd.RDD
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable.ArrayBuffer
+/**
+  * Created by Eric on 10/14/2016.
+  * Will store the lemmatization a stopword removal code from the raw data
+  */
+object CleanTweet {
+
+  def clean(args: Array[String], outName:String): Unit = {
+    val inputFilename = args(1)
+    val conf = new SparkConf().setAppName("SparkGrep").setMaster(args(0))
+    val sc = new SparkContext(conf)
+    val rootLogger = Logger.getRootLogger
+    rootLogger.setLevel(Level.ERROR)
+    //Get the training data file passed as an argument
+    val trainingFileInput = sc.textFile(inputFilename).map(x => x.split(";",2)(1))
+    val keys = sc.textFile(inputFilename).map(x => x.split(";",2)(0))
+    val cleaned = getCleanedTweets(trainingFileInput, sc)
+    //val cleaned_sent = cleaned.map(arr => arr.mkString(" "))
+    cleaned.zip(trainingFileInput).foreach(println)
+    keys.zip(cleaned.zip(trainingFileInput)).foreach(println)
+    new PrintWriter(outName) { write(keys.zip(cleaned).map(va => va._1.toString +  ";" +va._2.toString).collect()
+      .mkString("\n")); close() }
+  }
+  def createNLPPipeline(): StanfordCoreNLP = {
+    val props = new Properties()
+    props.put("annotators", "tokenize, ssplit, pos, lemma")
+    new StanfordCoreNLP(props)
+  }
+
+  def plainTextToLemmas(text: String, stopWords: Set[String], pipeline: StanfordCoreNLP)
+  : Seq[String] = {
+    val t = text.replaceAll("[#]", "")
+    val doc = new Annotation(t)
+    pipeline.annotate(doc)
+    val lemmas = new ArrayBuffer[String]()
+    val sentences = doc.get(classOf[SentencesAnnotation])
+    for (sentence <- sentences.asScala;
+         token <- sentence.get(classOf[TokensAnnotation]).asScala) {
+      val lemma = token.get(classOf[LemmaAnnotation])
+      if (lemma.length > 2 && !stopWords.contains(lemma) && isOnlyLetters(lemma)) {
+        lemmas += lemma.toLowerCase
+      }
+    }
+    lemmas
+  }
+
+  def isOnlyLetters(str: String): Boolean = {
+    // While loop for high performance
+    var i = 0
+    while (i < str.length) {
+      if (!Character.isLetter(str.charAt(i))) {
+        return false
+      }
+      i += 1
+    }
+    true
+  }
+  def getCleanedTweets(tweets: RDD[String], sc: SparkContext) : RDD[String] = {
+    val stopWords = sc.broadcast(
+                              scala.io.Source.fromFile("data/stopwords.txt").getLines().toSet).value
+    tweets.mapPartitions(it => {
+      val pipeline = createNLPPipeline()
+      it.map(t => plainTextToLemmas(t,stopWords,pipeline).mkString(" "))
+    })
+  }
+  /*
+  def cleanWord(word: String): String = {
+    val pipeline = createNLPPipeline()
+
+    def plainTweetToLemma(text: String, pipeline: StanfordCoreNLP)
+    : String = {
+      val doc = new Annotation(text)
+      pipeline.annotate(doc)
+      var lemma = "INVALID"
+      val sentences = doc.get(classOf[SentencesAnnotation])
+      for (sentence <- sentences.asScala;
+           token <- sentence.get(classOf[TokensAnnotation]).asScala) {
+        val lemma_t = token.get(classOf[LemmaAnnotation])
+        if (lemma_t.length > 2 && isOnlyLetters(lemma_t)) {
+          lemma = lemma_t
+        }
+      }
+      lemma
+    }
+    plainTweetToLemma(word,pipeline)
+  }*/
+}
