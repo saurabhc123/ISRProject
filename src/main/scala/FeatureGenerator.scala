@@ -38,7 +38,8 @@ class FeatureGenerator(message: RDD[Array[String]]) {
 
       Vectors.dense(issac, hurricane, weather)
     }
-    case "tfidf" => {
+    case "wcp" => {
+
       Vectors.dense(1.0, 0.0, 3.0)
     }
     case "word2vec" => {
