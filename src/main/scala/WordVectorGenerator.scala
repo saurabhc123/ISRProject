@@ -18,7 +18,7 @@ object WordVectorGenerator {
     val input = sc.textFile(inputFilename).map(line => line.split(" ").toSeq)
 
     val word2vec = new Word2Vec()
-    word2vec.setWindowSize(_word2VecModelLength)
+    word2vec.setVectorSize(_word2VecModelLength)
     val model = word2vec.fit(input)
     _classModel = model
 

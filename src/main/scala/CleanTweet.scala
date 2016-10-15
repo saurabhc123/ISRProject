@@ -3,12 +3,17 @@ import java.io.PrintWriter
 import java.util.Properties
 
 import edu.stanford.nlp.ling.CoreAnnotations.{LemmaAnnotation, SentencesAnnotation, TokensAnnotation}
+import edu.stanford.nlp.ling.CoreLabel
 import edu.stanford.nlp.pipeline.{Annotation, StanfordCoreNLP}
+import edu.stanford.nlp.util.CoreMap
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
 
-import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
+import scala.tools.nsc.interpreter.session.JIterator
+
+//import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 /**
   * Created by Eric on 10/14/2016.
@@ -44,12 +49,25 @@ object CleanTweet {
     val doc = new Annotation(t)
     pipeline.annotate(doc)
     val lemmas = new ArrayBuffer[String]()
-    val sentences = doc.get(classOf[SentencesAnnotation])
-    for (sentence <- sentences.asScala;
-         token <- sentence.get(classOf[TokensAnnotation]).asScala) {
-      val lemma = token.get(classOf[LemmaAnnotation])
-      if (lemma.length > 2 && !stopWords.contains(lemma) && isOnlyLetters(lemma)) {
-        lemmas += lemma.toLowerCase
+    var s = new ListBuffer[CoreMap]()
+    def addIt(x: CoreMap) : Unit = {
+      s += x
+    }
+    def scalaIterator[T](it: JIterator[T]) = new Iterator[T] {
+      override def hasNext = it.hasNext
+      override def next() = it.next()
+    }
+    scalaIterator(doc.get(classOf[SentencesAnnotation]).iterator()).foreach(addIt)
+    for (sentence <- s){
+      val t = new ListBuffer[CoreLabel]() ;
+      for (tw <- scalaIterator(sentence.get(classOf[TokensAnnotation]).iterator())){
+        t += tw
+      }
+      for (token <- t){
+        val lemma = token.get(classOf[LemmaAnnotation])
+        if (lemma.length > 2 && !stopWords.contains(lemma) && isOnlyLetters(lemma)) {
+          lemmas += lemma.toLowerCase
+        }
       }
     }
     lemmas
