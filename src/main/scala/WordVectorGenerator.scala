@@ -12,7 +12,7 @@ import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
 object WordVectorGenerator {
 
   var _classModel : Word2VecModel = null
-  val _word2VecModelLength = 300
+  val _word2VecModelLength = 70
 
   def generateWordVector(inputFilename: String, sc: SparkContext):Unit = {
     val input = sc.textFile(inputFilename).map(line => line.split(" ").toSeq)
