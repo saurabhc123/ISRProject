@@ -3,8 +3,8 @@ package scala
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
-import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MulticlassMetrics}
-import org.apache.spark.mllib.regression.{GeneralizedLinearAlgorithm, GeneralizedLinearModel, LabeledPoint}
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -14,19 +14,19 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object MultiClassOrchestrator {
 
-  val _numOfClasses = 9
+  var _numOfClasses = 2
 
   def train(args: Array[String]): Unit = {
     val inputFilename = args(1)
+    _numOfClasses = args(2).toInt
     val conf = new SparkConf().setAppName("SparkGrep").setMaster(args(0))
     val sc = new SparkContext(conf)
     val rootLogger = Logger.getRootLogger()
     rootLogger.setLevel(Level.ERROR)
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
-    //val fpmPatterns = FpGenerate.generateFrequentPatterns(inputFilename, sc)
+
     WordVectorGenerator.generateWordVector(inputFilename, sc)
-    //val trainingData = trainingFileInput.map(line => CreateLabeledPointFromAveragedWordVector(line))
     val data = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, null))
 
     // Split data into training (60%) and test (40%).
@@ -80,39 +80,6 @@ object MultiClassOrchestrator {
     //println(s"$line $lp")
     return lp
   }
-
-  def runClassification(algorithm: GeneralizedLinearAlgorithm[_ <: GeneralizedLinearModel], trainingData: RDD[LabeledPoint], testData: RDD[LabeledPoint]): RDD[(Double, Double)] = {
-    //Train the classifier using the training data
-    //Do n-fold cross-validation to choose the best model.
-    val model = algorithm.run(trainingData)
-    val predicted = model.predict(testData.map(point => point.features))
-    val actuals = testData.map(point => point.label)
-    val predictsAndActuals: RDD[(Double, Double)] = predicted.zip(actuals)
-    predictsAndActuals
-  }
-
-  def calculateMetrics(predictsAndActuals: RDD[(Double, Double)], algorithm: String) {
-     val accuracy = 1.0*predictsAndActuals.filter(predActs => predActs._1 == predActs._2).count() / predictsAndActuals.count()
-     val binMetrics = new BinaryClassificationMetrics(predictsAndActuals)
-     println(s"\n************** Printing metrics for $algorithm ***************")
-     println(s"Area under ROC ${binMetrics.areaUnderROC}")
-     //println(s"Accuracy $accuracy")
-     val metrics = new MulticlassMetrics(predictsAndActuals)
-     val f1=metrics.fMeasure
-     val evalCount = predictsAndActuals.count()
-     println(s"F1 $f1")
-     println(s"Number of test records: $evalCount")
-     println(s"Precision : ${metrics.precision}")
-
-    for (i <- 0 to _numOfClasses - 1) {
-      val classLabel = i
-      println(s"\nTrue Positive: {$classLabel}\n${metrics.truePositiveRate(classLabel)}")
-      println(s"False Positive: {$classLabel}\n${metrics.falsePositiveRate(classLabel)}")
-    }
-
-     println(s"Confusion Matrix \n${metrics.confusionMatrix}")
-     println(s"************** ending metrics for $algorithm *****************\n")
-     }
 
   def getModel():Unit = {
     //Load the classifier from the file.
