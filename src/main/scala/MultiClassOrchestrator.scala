@@ -14,7 +14,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object MultiClassOrchestrator {
 
-
+  val _numOfClasses = 9
 
   def train(args: Array[String]): Unit = {
     val inputFilename = args(1)
@@ -37,7 +37,7 @@ object MultiClassOrchestrator {
 
     // Run training algorithm to build the model
     val model = new LogisticRegressionWithLBFGS()
-      .setNumClasses(3)
+      .setNumClasses(_numOfClasses)
       .run(training)
 
     // Compute raw scores on the test set.
@@ -54,12 +54,21 @@ object MultiClassOrchestrator {
     println(s"Accuracy = $accuracy")
     println(s"Weighted Precision = $precision")
     println(s"Weighted Recall = $recall")
+    for (i <- 0 to _numOfClasses - 1) {
+      val classLabel = i
+      println(s"\n***********   Class:$classLabel   *************")
+      println(s"F1 Score:${metrics.fMeasure(classLabel)}")
+      println(s"True Positive:${metrics.truePositiveRate(classLabel)}")
+      println(s"False Positive:${metrics.falsePositiveRate(classLabel)}")
+    }
+
+     println(s"\nConfusion Matrix \n${metrics.confusionMatrix}")
 
     //Save the model into a file on HDFS.
   }
 
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
-    val delimiter = '|'
+    val delimiter = ';'
     val values = line.split(delimiter)
     val label = values(0)
     //println(s"label: $label")
@@ -94,6 +103,13 @@ object MultiClassOrchestrator {
      println(s"F1 $f1")
      println(s"Number of test records: $evalCount")
      println(s"Precision : ${metrics.precision}")
+
+    for (i <- 0 to _numOfClasses - 1) {
+      val classLabel = i
+      println(s"\nTrue Positive: {$classLabel}\n${metrics.truePositiveRate(classLabel)}")
+      println(s"False Positive: {$classLabel}\n${metrics.falsePositiveRate(classLabel)}")
+    }
+
      println(s"Confusion Matrix \n${metrics.confusionMatrix}")
      println(s"************** ending metrics for $algorithm *****************\n")
      }
