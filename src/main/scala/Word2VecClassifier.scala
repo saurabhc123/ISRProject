@@ -36,7 +36,7 @@ object Word2VecClassifier{
       println("--------------------------")
     }
 
-    val delimiter = ";"
+    val delimiter = '|'
     val conf = new SparkConf(false).setMaster("local").setAppName("Word2Vec")
     val sc = new SparkContext(conf)
 
@@ -82,7 +82,7 @@ object Word2VecClassifier{
 
     println("Finished Training")
     println(word2vecModel.transform("hurricane"))
-    println(word2vecModel.findSynonyms("shooting", 4))
+    //println(word2vecModel.findSynonyms("shooting", 4))
 
     def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
 
@@ -125,8 +125,10 @@ object Word2VecClassifier{
   def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)],classifierType : String): Unit = {
     // Get evaluation metrics.
     val metrics = new MulticlassMetrics(predictionAndLabels)
+    //val uniqueLabels = predictionAndLabels.map(x => x._1).
 
     for (i <- 0 to _numOfClasses - 1) {
+    //for (i <- uniqueLabels) {
       val classLabel = i
       println(s"\n***********   Class:$classLabel   *************")
       println(s"F1 Score:${metrics.fMeasure(classLabel)}")
