@@ -4,6 +4,7 @@ package org.apache.spark.mllib.linalg
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
+import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.feature.Word2Vec
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
@@ -39,30 +40,28 @@ object Word2VecClassifier extends App {
   val testFile = sc.textFile(testPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
 
   // To sample
-  def toSample(segments: Array[String]) = segments match {
-    //case Array(id, label, tweetText) => Sample(id, tweetText, Some(label.toInt))
-    //case Array(id, review) => Sample(id, review)
+  def toTweet(segments: Array[String]) = segments match {
     case Array(label, tweetText) => Tweet(java.util.UUID.randomUUID.toString , tweetText, Some(label.toDouble))
   }
 
-  val trainSamples = trainFile map toSample
-  val testSamples = testFile map toSample
+  val trainingTweets = trainFile map toTweet
+  val testTweets = testFile map toTweet
 
   // Clean Html
   def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
 
-  def cleanSampleHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
+  def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
 
-  val cleanTrainSamples = trainSamples map cleanSampleHtml
-  val cleanTestSamples = testSamples map cleanSampleHtml
+  val cleanTrainingTweets = trainingTweets map cleanTweetHtml
+  val cleanTestTweets = testTweets map cleanTweetHtml
 
   // Words only
   def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduce((x, y) => s"$x $y")
 
   def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText))
 
-  val wordOnlyTrainSample = cleanTrainSamples map wordOnlySample
-  val wordOnlyTestSample = cleanTestSamples map wordOnlySample
+  val wordOnlyTrainSample = cleanTrainingTweets map wordOnlySample
+  val wordOnlyTestSample = cleanTestTweets map wordOnlySample
 
   // Word2Vec
   val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
@@ -83,11 +82,10 @@ object Word2VecClassifier extends App {
   // Create feature vectors
   val wordFeaturePair = reviewWordsPairs mapValues wordFeatures
   val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
-  //val nonNullValues = intermediateVectors.map(x => (!x._2.isEmpty, x) ).filter(_._1).map(v => v)
   val inter2 = wordFeaturePair.filter(!_._2.isEmpty)
   val avgWordFeaturesPair = inter2 mapValues avgWordFeatures
   val featuresPair = avgWordFeaturesPair join samplePairs mapValues {
-    case (features, Tweet(id, review, label)) => LabeledPoint(label.get, features)
+    case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
   }
   val trainingSet = featuresPair.values
 
@@ -95,30 +93,49 @@ object Word2VecClassifier extends App {
   println("String Learning and evaluating models")
   val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
   // Run training algorithm to build the model
-    val logisticRegressionModel = new LogisticRegressionWithLBFGS()
-      .setNumClasses(numberOfClasses)
-      .run(x_train)
+  val logisticRegressionModel = new LogisticRegressionWithLBFGS()
+    .setNumClasses(numberOfClasses)
+    .run(x_train)
 
-    val trainingRDD = x_train.toJavaRDD()
-    //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
-    // Compute raw scores on the test set.
-    val logisticRegressionPredictions = x_test.map { case LabeledPoint(label, features) =>
-      val prediction = logisticRegressionModel.predict(features)
-      (prediction, label)
-    }
+  val trainingRDD = x_train.toJavaRDD()
+  //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
+  // Compute raw scores on the test set.
+  val logisticRegressionPredictions = x_test.map { case LabeledPoint(label, features) =>
+    val prediction = logisticRegressionModel.predict(features)
+    (prediction, label)
+  }
 
-
-
-  //val model = SVMWithSGD.train(x_train, 100)
-
-  //val result = model.predict(x_test.map(_.features))
-
-  println(s"10 samples:")
-  x_test.map { case LabeledPoint(label, features) => s"$label -> ${logisticRegressionModel.predict(features)}" } foreach println
-  val accuracy = x_test.filter(x => x.label == logisticRegressionModel.predict(x.features)).count.toFloat / x_test.count
-  println(s"Model Accuracy: $accuracy")
+  GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
 
   println("<---- done")
   Thread.sleep(10000)
-}
+
+
+  def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)],classifierType : String): Unit = {
+    // Get evaluation metrics.
+    val metrics = new MulticlassMetrics(predictionAndLabels)
+
+    for (i <- 0 to numberOfClasses - 1) {
+      val classLabel = i
+      println(s"\n***********   Class:$classLabel   *************")
+      println(s"F1 Score:${metrics.fMeasure(classLabel)}")
+      println(s"True Positive:${metrics.truePositiveRate(classLabel)}")
+      println(s"False Positive:${metrics.falsePositiveRate(classLabel)}")
+    }
+
+    println(s"\nConfusion Matrix \n${metrics.confusionMatrix}")
+
+    val accuracy = metrics.accuracy
+    val precision = metrics.weightedPrecision
+    val recall = metrics.weightedRecall
+    println(s"\n***********   Classifier Results for $classifierType   *************")
+    println(s"Accuracy = $accuracy")
+    println(s"Weighted Precision = $precision")
+    println(s"Weighted Recall = $recall")
+
+    println(s"\n***********   End of Classifier Results for $classifierType   *************")
+  }
+ }
+
+
 
