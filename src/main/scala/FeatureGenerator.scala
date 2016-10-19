@@ -1,5 +1,5 @@
 package scala
-import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.{WordVectorGenerator, Vectors}
 import org.apache.spark.rdd.RDD
 
 /**
