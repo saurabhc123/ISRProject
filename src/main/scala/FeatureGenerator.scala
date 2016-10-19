@@ -1,5 +1,5 @@
 package scala
-import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.linalg.{WordVectorGenerator, Vectors}
 import org.apache.spark.rdd.RDD
 
 /**
@@ -38,7 +38,8 @@ class FeatureGenerator(message: RDD[Array[String]]) {
 
       Vectors.dense(issac, hurricane, weather)
     }
-    case "tfidf" => {
+    case "wcp" => {
+
       Vectors.dense(1.0, 0.0, 3.0)
     }
     case "word2vec" => {
