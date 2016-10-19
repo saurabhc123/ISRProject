@@ -4,6 +4,7 @@ package scala
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.linalg.WordVectorGenerator
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -36,21 +37,36 @@ object MultiClassOrchestrator {
 
 
     // Run training algorithm to build the model
-    val model = new LogisticRegressionWithLBFGS()
+    val logisticRegressionModel = new LogisticRegressionWithLBFGS()
       .setNumClasses(_numOfClasses)
       .run(training)
 
+    val trainingRDD = training.toJavaRDD()
+    //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
     // Compute raw scores on the test set.
-    val predictionAndLabels = test.map { case LabeledPoint(label, features) =>
-      val prediction = model.predict(features)
+    val logisticRegressionPredictions = test.map { case LabeledPoint(label, features) =>
+      val prediction = logisticRegressionModel.predict(features)
       (prediction, label)
     }
 
+    /*val svmPredictions = test.map {x =>
+      val lp = LabeledPoint(x.label, x.features)
+      val prediction = svmModel.predict(lp)
+      (prediction, lp.label)
+    }*/
+
+    GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
+    //GenerateClassifierMetrics(svmPredictions, "SVM with SGD: OVA")
+    //Save the model into a file on HDFS.
+  }
+
+  def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)],classifierType : String): Unit = {
     // Get evaluation metrics.
     val metrics = new MulticlassMetrics(predictionAndLabels)
     val accuracy = metrics.accuracy
     val precision = metrics.weightedPrecision
     val recall = metrics.weightedRecall
+    println(s"\n***********   Classifier Results for $classifierType   *************")
     println(s"Accuracy = $accuracy")
     println(s"Weighted Precision = $precision")
     println(s"Weighted Recall = $recall")
@@ -62,9 +78,8 @@ object MultiClassOrchestrator {
       println(s"False Positive:${metrics.falsePositiveRate(classLabel)}")
     }
 
-     println(s"\nConfusion Matrix \n${metrics.confusionMatrix}")
-
-    //Save the model into a file on HDFS.
+    println(s"\nConfusion Matrix \n${metrics.confusionMatrix}")
+    println(s"\n***********   End of Classifier Results for $classifierType   *************")
   }
 
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {

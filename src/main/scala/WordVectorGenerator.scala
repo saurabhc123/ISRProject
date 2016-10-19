@@ -1,7 +1,11 @@
-package scala
+package org.apache.spark.mllib.linalg
 
+import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV}
 import org.apache.spark.SparkContext
-import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
+import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
+import org.apache.spark.rdd.RDD
+
+import scala.util.Try
 
 
 /**
@@ -15,12 +19,33 @@ object WordVectorGenerator {
   val _word2VecModelLength = 70
 
   def generateWordVector(inputFilename: String, sc: SparkContext):Unit = {
-    val input = sc.textFile(inputFilename).map(line => line.split(" ").toSeq)
+    //lists of list of words
+    val input = sc.textFile(inputFilename).map(line => line.split(" "))
+
+
+
+    val samplePairs = input.map(s => s).cache()
+    val inputWords: RDD[(Iterable[String])] = samplePairs.map(x => x.toIterable)
+    println("Start Training Word2Vec --->")
 
     val word2vec = new Word2Vec()
     word2vec.setVectorSize(_word2VecModelLength)
-    val model = word2vec.fit(input)
-    _classModel = model
+    val word2VecModel = word2vec.fit(inputWords)
+    _classModel = word2VecModel
+
+    def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2VecModel.transform(w))).filter(_.isSuccess).map(_.get)
+
+    def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.asBreeze).reduceLeft(_ + _) / wordFeatures.size.toDouble)
+
+    // Create a feature vectors
+    val wordFeaturePair = inputWords map wordFeatures
+    val avgWordFeaturesPair = wordFeaturePair map avgWordFeatures
+    /*val featuresPair = avgWordFeaturesPair join samplePairs mapValues {
+    case (features, s ) => LabeledPoint(s, features)
+     }
+
+
+    val trainingSet = featuresPair.values*/
 
     /*val synonyms = model.findSynonyms("loan", 5)
     val loanVector = model.transform("loan")
