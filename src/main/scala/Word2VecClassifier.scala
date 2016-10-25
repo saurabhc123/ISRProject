@@ -2,10 +2,12 @@
 
 package org.apache.spark.mllib.linalg
 
+import java.io.IOException
+
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.feature.Word2Vec
+import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -16,6 +18,7 @@ case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
   var _numOfClasses = 2
+  var _modelFilename = "data/word2vec.model"
 
   def run(args: Array[String]) {
 
@@ -78,7 +81,21 @@ object Word2VecClassifier{
     val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
     val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
     println("Start Training Word2Vec --->")
-    val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
+
+    var word2vecModel:Word2VecModel = null
+
+    try {
+      word2vecModel = Word2VecModel.load(sc, _modelFilename)
+      println(s"Model file found:${_modelFilename}. Loading model.")
+    }
+    catch{
+      case ioe: IOException =>
+          println(s"Model not found at ${_modelFilename}. Creating model.")
+          word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
+          word2vecModel.save(sc, _modelFilename);
+          println(s"Saved model as ${_modelFilename} .")
+    }
+
 
     println("Finished Training")
     println(word2vecModel.transform("hurricane"))
