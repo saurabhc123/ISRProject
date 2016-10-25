@@ -138,11 +138,11 @@ object Word2VecClassifier{
 
     println(s"\nConfusion Matrix \n${metrics.confusionMatrix}")
 
-    val accuracy = metrics.accuracy
+    val f1Measure = metrics.weightedFMeasure
     val precision = metrics.weightedPrecision
     val recall = metrics.weightedRecall
     println(s"\n***********   Classifier Results for $classifierType   *************")
-    println(s"Accuracy = $accuracy")
+    println(s"F1-Measure = $f1Measure")
     println(s"Weighted Precision = $precision")
     println(s"Weighted Recall = $recall")
 
