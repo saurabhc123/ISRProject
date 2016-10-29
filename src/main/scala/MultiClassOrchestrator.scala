@@ -4,7 +4,6 @@ package scala
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.linalg.WordVectorGenerator
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -27,7 +26,8 @@ object MultiClassOrchestrator {
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
 
-    WordVectorGenerator.generateWordVector(inputFilename, sc)
+
+    //WordVectorGenerator.generateWordVector(inputFilename, sc)
     val data = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, null))
 
     // Split data into training (60%) and test (40%).
@@ -83,13 +83,13 @@ object MultiClassOrchestrator {
   }
 
   def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
-    val delimiter = ';'
+    val delimiter = '|'
     val values = line.split(delimiter)
     val label = values(0)
     //println(s"label: $label")
     val documentBody = values(1)
     val fg = new FeatureGenerator(fpmPatterns)//word2vec
-    val features = fg.getFeatures("word2vec", documentBody)
+    val features = fg.getFeatures("wcp", documentBody)
     //val features = fg.getFeatures("fpm", documentBody)
     val lp = LabeledPoint(label.toDouble, features)
     //println(s"$line $lp")

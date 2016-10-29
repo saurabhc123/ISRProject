@@ -5,10 +5,8 @@ package org.apache.spark.mllib.linalg
 import java.io.IOException
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
-import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -18,7 +16,8 @@ case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
   var _numOfClasses = 2
-  var _modelFilename = "data/word2vec.model"
+  var _modelFilename = "data/word2vecHuge.model"
+  val dataDir = "data/reuters21578/*.sgm"
 
   def run(args: Array[String]) {
 
@@ -26,6 +25,7 @@ object Word2VecClassifier{
       System.err.println("Usage: SparkGrep <host> <input_file> <numberofClasses>")
       System.exit(1)
     }
+
 
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
@@ -43,6 +43,10 @@ object Word2VecClassifier{
     val conf = new SparkConf(false).setMaster("local").setAppName("Word2Vec")
     val sc = new SparkContext(conf)
 
+    val textDF = sc.wholeTextFiles(dataDir).map{case(file, text) => text}.map(Tuple1.apply)
+
+
+
     // Load
     val trainPath = inputFilename
     val testPath = inputFilename
@@ -53,9 +57,11 @@ object Word2VecClassifier{
     val trainFile = sc.textFile(trainPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
     val testFile = sc.textFile(testPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
 
+
     // To sample
     def toTweet(segments: Array[String]) = segments match {
       case Array(label, tweetText) => Tweet(java.util.UUID.randomUUID.toString, tweetText, Some(label.toDouble))
+      case Array(tweetText) => Tweet(java.util.UUID.randomUUID.toString, tweetText, Some(0.0))
     }
 
     val trainingTweets = trainFile map toTweet
@@ -68,6 +74,7 @@ object Word2VecClassifier{
 
     val cleanTrainingTweets = trainingTweets map cleanTweetHtml
     val cleanTestTweets = testTweets map cleanTweetHtml
+    val cleanCorpus = textDF.map(x => x._1.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduce((x,y) => s"$x $y"))
 
     // Words only
     def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduce((x, y) => s"$x $y")
@@ -79,19 +86,19 @@ object Word2VecClassifier{
 
     // Word2Vec
     val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
-    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
+    val reviewWordsPairs: RDD[(Iterable[String])] = cleanCorpus.map(_.split(" ").toIterable)
     println("Start Training Word2Vec --->")
 
     var word2vecModel:Word2VecModel = null
 
     try {
       word2vecModel = Word2VecModel.load(sc, _modelFilename)
-      println(s"Model file found:${_modelFilename}. Loading model.")
+      println(s"Model file:<${_modelFilename}> found. Loading model.")
     }
     catch{
       case ioe: IOException =>
           println(s"Model not found at ${_modelFilename}. Creating model.")
-          word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
+          word2vecModel = new Word2Vec().fit(reviewWordsPairs)
           word2vecModel.save(sc, _modelFilename);
           println(s"Saved model as ${_modelFilename} .")
     }
@@ -99,7 +106,6 @@ object Word2VecClassifier{
 
     println("Finished Training")
     println(word2vecModel.transform("hurricane"))
-    //println(word2vecModel.findSynonyms("shooting", 4))
 
     def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
 
@@ -107,7 +113,7 @@ object Word2VecClassifier{
 
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
-    // Create feature vectors
+    /*// Create feature vectors
     val wordFeaturePair = reviewWordsPairs mapValues wordFeatures
     val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2 = wordFeaturePair.filter(!_._2.isEmpty)
@@ -134,7 +140,7 @@ object Word2VecClassifier{
     }
 
     GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
-
+*/
     println("<---- done")
     Thread.sleep(10000)
   }

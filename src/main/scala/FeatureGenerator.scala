@@ -17,6 +17,8 @@ class FeatureGenerator(message: RDD[Array[String]]) {
 
 
 
+
+
   def getFeatures(featureType: String, documentBody: String) = featureType match {
     case "fpm" => {
       //Load the FPM List of Lists
