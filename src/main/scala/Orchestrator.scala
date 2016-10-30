@@ -1,9 +1,9 @@
 
-package scala
+package isr.project
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MulticlassMetrics}
-import org.apache.spark.mllib.linalg.WordVectorGenerator
+import org.apache.spark.mllib.linalg.Tweet
 import org.apache.spark.mllib.regression.{GeneralizedLinearAlgorithm, GeneralizedLinearModel, LabeledPoint}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -24,8 +24,7 @@ object Orchestrator {
     rootLogger.setLevel(Level.ERROR)
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
-    //val fpmPatterns = FpGenerate.generateFrequentPatterns(inputFilename, sc)
-    WordVectorGenerator.generateWordVector(inputFilename, sc)
+    
     //val trainingData = trainingFileInput.map(line => CreateLabeledPointFromAveragedWordVector(line))
     val trainingData = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, null))
 
@@ -57,13 +56,13 @@ object Orchestrator {
     //Save the model into a file on HDFS.
   }
 
-  def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
+  def CreateLabeledPointFromInputLine(line: String, tweets: RDD[Tweet]): LabeledPoint = {
     val delimiter = ';'
     val values = line.split(delimiter)
     val label = values(0)
     val documentBody = values(1)
-    val fg = new FeatureGenerator(fpmPatterns)//word2vec
-    val features = fg.getFeatures("word2vec", documentBody)
+    val fg = new FeatureGenerator(tweets)//word2vec
+    val features = fg.getFeatures("wcp", documentBody)
     //val features = fg.getFeatures("fpm", documentBody)
     val lp = LabeledPoint(label.toDouble, features)
     //println(s"$line $lp")

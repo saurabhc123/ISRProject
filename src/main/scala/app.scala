@@ -1,4 +1,4 @@
-package scala
+package isr.project
 
 /**
  * Hello world!

@@ -1,7 +1,7 @@
 /**
  * Created by saur6410 on 10/15/16.
  */
-package scala
+package isr.project
 
 import org.apache.spark.mllib.classification.{SVMModel, SVMWithSGD}
 import org.apache.spark.mllib.regression.LabeledPoint

@@ -20,7 +20,7 @@ object Word2VecClassifier{
   var _numOfClasses = 2
   var _modelFilename = "data/word2vec.model"
 
-  def run(args: Array[String]) {
+  def run(args: Array[String], delimiter: Char) {
 
     if (args.length < 3) {
       System.err.println("Usage: SparkGrep <host> <input_file> <numberofClasses>")
@@ -39,7 +39,7 @@ object Word2VecClassifier{
       println("--------------------------")
     }
 
-    val delimiter = '|'
+    //val delimiter = ''
     val conf = new SparkConf(false).setMaster("local").setAppName("Word2Vec")
     val sc = new SparkContext(conf)
 
@@ -109,7 +109,7 @@ object Word2VecClassifier{
 
     // Create feature vectors
     val wordFeaturePair = reviewWordsPairs mapValues wordFeatures
-    val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
+    //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2 = wordFeaturePair.filter(!_._2.isEmpty)
     val avgWordFeaturesPair = inter2 mapValues avgWordFeatures
     val featuresPair = avgWordFeaturesPair join samplePairs mapValues {
