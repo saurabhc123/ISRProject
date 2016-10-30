@@ -1,13 +1,15 @@
 
-package scala
+package isr.project
+
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.linalg.WordVectorGenerator
+import org.apache.spark.mllib.linalg.Tweet
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
+
 
 /**
  * Created by saur6410 on 10/2/16.
@@ -16,10 +18,12 @@ import org.apache.spark.{SparkConf, SparkContext}
 object MultiClassOrchestrator {
 
   var _numOfClasses = 2
+  var _delimiter = '|'
 
-  def train(args: Array[String]): Unit = {
+  def train(args: Array[String], delimiter: Char): Unit = {
     val inputFilename = args(1)
     _numOfClasses = args(2).toInt
+    _delimiter = delimiter
     val conf = new SparkConf().setAppName("SparkGrep").setMaster(args(0))
     val sc = new SparkContext(conf)
     val rootLogger = Logger.getRootLogger()
@@ -27,7 +31,21 @@ object MultiClassOrchestrator {
     //Get the training data file passed as an argument
     val trainingFileInput = sc.textFile(inputFilename)
 
-    WordVectorGenerator.generateWordVector(inputFilename, sc)
+    def toTweet(segments: Array[String]) = segments match {
+      case Array(label, tweetText) => Tweet(java.util.UUID.randomUUID.toString, tweetText, Some(label.toDouble))
+    }
+
+    // Load text
+    def skipHeaders(idx: Int, iter: Iterator[String]) = if (idx == 0) iter.drop(1) else iter
+
+    val trainFile = trainingFileInput mapPartitionsWithIndex skipHeaders map (l => l.split(_delimiter))
+    val trainingTweets = trainFile map toTweet
+
+    val fg = new FeatureGenerator(trainingTweets)
+    fg.InitializeFeatures("wcp", _numOfClasses)
+
+
+    //WordVectorGenerator.generateWordVector(inputFilename, sc)
     val data = trainingFileInput.map(line => CreateLabeledPointFromInputLine(line, null))
 
     // Split data into training (60%) and test (40%).
@@ -82,13 +100,13 @@ object MultiClassOrchestrator {
     println(s"\n***********   End of Classifier Results for $classifierType   *************")
   }
 
-  def CreateLabeledPointFromInputLine(line: String, fpmPatterns: RDD[Array[String]]): LabeledPoint = {
+  def CreateLabeledPointFromInputLine(line: String, tweets: RDD[Tweet]): LabeledPoint = {
     val delimiter = ';'
     val values = line.split(delimiter)
     val label = values(0)
     //println(s"label: $label")
     val documentBody = values(1)
-    val fg = new FeatureGenerator(fpmPatterns)//word2vec
+    val fg = new FeatureGenerator(tweets)//word2vec
     val features = fg.getFeatures("word2vec", documentBody)
     //val features = fg.getFeatures("fpm", documentBody)
     val lp = LabeledPoint(label.toDouble, features)

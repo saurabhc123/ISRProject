@@ -1,6 +1,4 @@
-package scala
-
-import org.apache.spark.mllib.linalg.Word2VecClassifier
+package isr.project
 
 object SparkGrep {
 	def main(args: Array[String]) {
@@ -10,8 +8,8 @@ object SparkGrep {
 			System.exit(1)
 		}
 
-		Word2VecClassifier.run(args)
-		//MultiClassOrchestrator.train(args)
+		//Word2VecClassifier.run(args, '|')
+		MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
 		//SparkUtilities.countWords(args)

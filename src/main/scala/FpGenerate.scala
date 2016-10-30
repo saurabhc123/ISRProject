@@ -2,7 +2,7 @@
  * Created by saur6410 on 10/1/16.
  */
 
-package scala
+package isr.project
 
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.fpm.FPGrowth

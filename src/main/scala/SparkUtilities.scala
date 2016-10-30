@@ -1,4 +1,4 @@
-package scala
+package isr.project
 
 
 import org.apache.spark.{SparkConf, SparkContext}

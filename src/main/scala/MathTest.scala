@@ -1,4 +1,4 @@
-package scala
+package isr.project
 
 /**
  * Created by saur6410 on 10/6/16.
