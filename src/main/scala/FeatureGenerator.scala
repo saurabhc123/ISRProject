@@ -71,6 +71,8 @@ class FeatureGenerator(tweets: RDD[Tweet]) {
 
 
       val uniqueVocabularyWords = _wcpClassesDict.map(x => x.toIterable)
+
+
       //Calculate the gini-coefficients
 
     }
