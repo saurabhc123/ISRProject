@@ -22,8 +22,8 @@ object Word2VecClassifier{
 
   def run(args: Array[String], delimiter: Char) {
 
-    if (args.length < 3) {
-      System.err.println("Usage: SparkGrep <host> <input_file> <numberofClasses>")
+    if (args.length < 4) {
+      System.err.println("Usage: SparkGrep <host> <training_file> <test_file> <numberofClasses>")
       System.exit(1)
     }
 
@@ -129,13 +129,12 @@ object Word2VecClassifier{
     val start = System.currentTimeMillis()
 
 
-    val samplePairsTest = wordOnlyTrainSample.map(s => s.id -> s).cache()
+    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
     val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
     val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
-    //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
-    val featuresPairTest = avgWordFeaturesPairTest join samplePairs mapValues {
+    val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
     val testSet = featuresPairTest.values
