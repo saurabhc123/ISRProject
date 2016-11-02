@@ -30,8 +30,9 @@ object Word2VecClassifier{
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
 
-    val inputFilename = args(1)
-    _numOfClasses = args(2).toInt
+    val trainFilename = args(1)
+    val testFilename = args(2)
+    _numOfClasses = args(3).toInt
 
     def printRDD(xs: RDD[_]) {
       println("--------------------------")
@@ -40,12 +41,12 @@ object Word2VecClassifier{
     }
 
     //val delimiter = ''
-    val conf = new SparkConf(false).setMaster("local").setAppName("Word2Vec")
+    val conf = new SparkConf(false).setMaster(args(0)).setAppName("Word2Vec")
     val sc = new SparkContext(conf)
 
     // Load
-    val trainPath = inputFilename
-    val testPath = inputFilename
+    val trainPath = trainFilename
+    val testPath = testFilename
 
     // Load text
     def skipHeaders(idx: Int, iter: Iterator[String]) = if (idx == 0) iter.drop(1) else iter
@@ -70,9 +71,9 @@ object Word2VecClassifier{
     val cleanTestTweets = testTweets map cleanTweetHtml
 
     // Words only
-    def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduce((x, y) => s"$x $y")
+    def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduceOption((x, y) => s"$x $y")
 
-    def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText))
+    def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText).getOrElse(""))
 
     val wordOnlyTrainSample = cleanTrainingTweets map wordOnlySample
     val wordOnlyTestSample = cleanTestTweets map wordOnlySample
@@ -108,27 +109,41 @@ object Word2VecClassifier{
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
     // Create feature vectors
-    val wordFeaturePair = reviewWordsPairs mapValues wordFeatures
+    val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
     //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
-    val inter2 = wordFeaturePair.filter(!_._2.isEmpty)
-    val avgWordFeaturesPair = inter2 mapValues avgWordFeatures
-    val featuresPair = avgWordFeaturesPair join samplePairs mapValues {
+    val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
+    val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
+    val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
-    val trainingSet = featuresPair.values
+    val trainingSet = featuresPairTrain.values
 
     // Classification
     println("String Learning and evaluating models")
-    val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
+    //val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
     // Run training algorithm to build the model
     val logisticRegressionModel = new LogisticRegressionWithLBFGS()
       .setNumClasses(_numOfClasses)
-      .run(x_train)
+      .run(trainingSet)
 
-    val trainingRDD = x_train.toJavaRDD()
+    val start = System.currentTimeMillis()
+
+
+    val samplePairsTest = wordOnlyTrainSample.map(s => s.id -> s).cache()
+    val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
+    val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
+    //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
+    val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
+    val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
+    val featuresPairTest = avgWordFeaturesPairTest join samplePairs mapValues {
+      case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
+    }
+    val testSet = featuresPairTest.values
+
+    //val trainingRDD = trainingSet.toJavaRDD()
     //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
     // Compute raw scores on the test set.
-    val logisticRegressionPredictions = x_test.map { case LabeledPoint(label, features) =>
+    val logisticRegressionPredictions = testSet.map { case LabeledPoint(label, features) =>
       val prediction = logisticRegressionModel.predict(features)
       (prediction, label)
     }
@@ -136,6 +151,8 @@ object Word2VecClassifier{
     GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
 
     println("<---- done")
+    val end = System.currentTimeMillis()
+    println((end-start)/1000.0 + " seconds")
     Thread.sleep(10000)
   }
 
