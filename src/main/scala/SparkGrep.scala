@@ -1,6 +1,6 @@
 package isr.project
 
-import org.apache.spark.mllib.linalg.Word2VecClassifier
+import org.apache.spark.ml.linalg.Word2VecClassifier
 
 object SparkGrep {
 	def main(args: Array[String]) {

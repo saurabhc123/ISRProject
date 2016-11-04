@@ -3,9 +3,9 @@ package isr.project
 
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.ml.linalg.Tweet
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.linalg.Tweet
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -109,9 +109,10 @@ object MultiClassOrchestrator {
     val fg = new FeatureGenerator(tweets)//word2vec
     val features = fg.getFeatures("word2vec", documentBody)
     //val features = fg.getFeatures("fpm", documentBody)
-    val lp = LabeledPoint(label.toDouble, features)
+    //val lp = LabeledPoint(label.toDouble, features)
     //println(s"$line $lp")
-    return lp
+    //return lp
+    return null
   }
 
   def getModel():Unit = {

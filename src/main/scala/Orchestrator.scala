@@ -2,8 +2,8 @@
 package isr.project
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.ml.linalg.Tweet
 import org.apache.spark.mllib.evaluation.{BinaryClassificationMetrics, MulticlassMetrics}
-import org.apache.spark.mllib.linalg.Tweet
 import org.apache.spark.mllib.regression.{GeneralizedLinearAlgorithm, GeneralizedLinearModel, LabeledPoint}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -64,9 +64,10 @@ object Orchestrator {
     val fg = new FeatureGenerator(tweets)//word2vec
     val features = fg.getFeatures("wcp", documentBody)
     //val features = fg.getFeatures("fpm", documentBody)
-    val lp = LabeledPoint(label.toDouble, features)
+    //val lp = LabeledPoint(label.toDouble, features)
     //println(s"$line $lp")
-    return lp
+    //return lp
+    return null
   }
 
   def runClassification(algorithm: GeneralizedLinearAlgorithm[_ <: GeneralizedLinearModel], trainingData: RDD[LabeledPoint], testData: RDD[LabeledPoint]): RDD[(Double, Double)] = {

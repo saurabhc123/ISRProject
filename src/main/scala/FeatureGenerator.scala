@@ -1,6 +1,6 @@
 package isr.project
 
-import org.apache.spark.mllib.linalg.{Tweet, Vectors}
+import org.apache.spark.ml.linalg.{Tweet, Vectors}
 import org.apache.spark.rdd.RDD
 
 //import scala.collection.mutable

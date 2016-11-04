@@ -1,15 +1,15 @@
 
 
-package org.apache.spark.mllib.linalg
+package org.apache.spark.ml.linalg
 
 import java.io.IOException
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
+import org.apache.spark.ml.classification.{LogisticRegression, OneVsRest}
+import org.apache.spark.ml.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
-import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Column, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.util.Try
@@ -18,7 +18,7 @@ case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
   var _numOfClasses = 2
-  var _modelFilename = "data/word2vec.model"
+  var _modelFilename = "data/word2vecWithCV.model"
 
   def run(args: Array[String], delimiter: Char) {
 
@@ -79,56 +79,81 @@ object Word2VecClassifier{
     val wordOnlyTestSample = cleanTestTweets map wordOnlySample
 
     // Word2Vec
-    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
-    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
+    val trainSamplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
+    val reviewWordsPairs =   trainSamplePairs.map(_._2.tweetText.split(" "))
     println("Start Training Word2Vec --->")
 
     var word2vecModel:Word2VecModel = null
+       val spark = SparkSession
+    .builder()
+    .appName(sc.appName)
+    .getOrCreate()
+
+    import spark.implicits._
+
 
     try {
-      word2vecModel = Word2VecModel.load(sc, _modelFilename)
+      word2vecModel = Word2VecModel.load(_modelFilename)
       println(s"Model file found:${_modelFilename}. Loading model.")
     }
     catch{
       case ioe: IOException =>
           println(s"Model not found at ${_modelFilename}. Creating model.")
-          word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
-          word2vecModel.save(sc, _modelFilename);
+          val word2Vec = new Word2Vec()
+          .setInputCol("tweetText")
+          .setOutputCol("result")
+          .setVectorSize(3)
+          .setMinCount(0)
+          word2vecModel = word2Vec.fit(reviewWordsPairs.toDF("tweetText"))
+          word2vecModel.save(_modelFilename);
           println(s"Saved model as ${_modelFilename} .")
     }
 
 
     println("Finished Training")
-    println(word2vecModel.transform("hurricane"))
+    //println(word2vecModel.transform("hurricane"))
     //println(word2vecModel.findSynonyms("shooting", 4))
 
-    def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
+
+    def wordFeatures(words: Iterable[String]): Iterable[Column] = words.map(w => Try(word2vecModel.getVectors(w))).filter(_.isSuccess).map(x => x.get)
 
     def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.asBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
     // Create feature vectors
-    val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
+    val wordFeaturePairTrain = trainSamplePairs.mapValues(t => t.tweetText.split(" ")) mapValues wordFeatures
     //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
     val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
-    val trainingSet = featuresPairTrain.values
+
+
+
+
+    val trainingSet = word2vecModel.transform(reviewWordsPairs.toDS())
+
+
+
+
+
 
     // Classification
     println("String Learning and evaluating models")
     //val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
     // Run training algorithm to build the model
-    val logisticRegressionModel = new LogisticRegressionWithLBFGS()
-      .setNumClasses(_numOfClasses)
-      .run(trainingSet)
+
+
+    val lr = new LogisticRegression()
+    .setMaxIter(10)
+
+
 
     val start = System.currentTimeMillis()
 
-
+    /*
     val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
     val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
     val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
@@ -137,17 +162,33 @@ object Word2VecClassifier{
     val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
-    val testSet = featuresPairTest.values
+    */
+
+    val testSet = wordOnlyTestSample.map(x => x.tweetText.split(" ")).toDS()
 
     //val trainingRDD = trainingSet.toJavaRDD()
     //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
     // Compute raw scores on the test set.
-    val logisticRegressionPredictions = testSet.map { case LabeledPoint(label, features) =>
-      val prediction = logisticRegressionModel.predict(features)
-      (prediction, label)
-    }
 
-    GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
+    val ovr = new OneVsRest()
+    ovr.setClassifier(lr)
+
+    val trainDF = trainingSet.toDF()
+    val testDF = testSet.toDF()
+
+    // train the multiclass model.
+    val ovrModel = ovr.fit(trainDF)
+
+    // score the model on test data.
+    val predictions  = ovrModel.transform(testDF)
+
+    // evaluate the model
+    val logisticRegressionPredictions = predictions.select("prediction", "label")
+    .map(row => (row.getDouble(0), row.getDouble(1)))
+
+
+
+    GenerateClassifierMetrics(logisticRegressionPredictions.toJavaRDD, "Logistic Regression")
 
     println("<---- done")
     val end = System.currentTimeMillis()
