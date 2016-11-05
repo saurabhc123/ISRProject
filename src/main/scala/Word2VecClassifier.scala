@@ -7,7 +7,7 @@ import java.io.IOException
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
-import org.apache.spark.mllib.feature.{Word2VecModel, Word2Vec}
+import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -122,11 +122,10 @@ object Word2VecClassifier{
     println("String Learning and evaluating models")
     //val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
     // Run training algorithm to build the model
-    val logisticRegressionModel = new LogisticRegressionWithLBFGS()
-      .setNumClasses(_numOfClasses)
-      .run(trainingSet)
 
-    val start = System.currentTimeMillis()
+
+
+
 
 
     val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
@@ -142,10 +141,11 @@ object Word2VecClassifier{
     //val trainingRDD = trainingSet.toJavaRDD()
     //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
     // Compute raw scores on the test set.
-    val logisticRegressionPredictions = testSet.map { case LabeledPoint(label, features) =>
-      val prediction = logisticRegressionModel.predict(features)
-      (prediction, label)
-    }
+
+    //import spark.implicits._
+
+    //val (logisticRegressionPredictions, start) = NFoldBasedWord2VecClassifier.GeneratePredictions(trainingSet, testSet, sc)
+    val (logisticRegressionPredictions, start) = GeneratePredictions(trainingSet, testSet)
 
     GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
 
@@ -154,6 +154,22 @@ object Word2VecClassifier{
     println((end-start)/1000.0 + " seconds")
     Thread.sleep(10000)
   }
+
+  def GeneratePredictions(trainingData: RDD[LabeledPoint], testData: RDD[LabeledPoint]): (RDD[(Double, Double)], Long) =
+    {
+      val logisticRegressionModel = new LogisticRegressionWithLBFGS()
+      .setNumClasses(_numOfClasses)
+      .run(trainingData)
+
+
+    val start = System.currentTimeMillis()
+    val logisticRegressionPredictions = testData.map { case LabeledPoint(label, features) =>
+      val prediction = logisticRegressionModel.predict(features)
+      (prediction, label)
+    }
+
+      return (logisticRegressionPredictions, start)
+    }
 
   def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)],classifierType : String): Unit = {
     // Get evaluation metrics.
