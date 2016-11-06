@@ -5,7 +5,7 @@ package org.apache.spark.mllib.linalg
 import java.io.IOException
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
+import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
@@ -17,8 +17,11 @@ import scala.util.Try
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
-  var _numOfClasses = 2
-  var _modelFilename = "data/word2vec.model"
+
+  
+  var _numberOfClasses = 2
+  var _word2VecModelFilename = "data/word2vec.model"
+  val _lrModelFilename = "data/lrclassifier.model"
 
   def run(args: Array[String], delimiter: Char) {
 
@@ -32,7 +35,10 @@ object Word2VecClassifier{
 
     val trainFilename = args(1)
     val testFilename = args(2)
-    _numOfClasses = args(3).toInt
+    _numberOfClasses = args(3).toInt
+
+
+
 
     def printRDD(xs: RDD[_]) {
       println("--------------------------")
@@ -40,9 +46,13 @@ object Word2VecClassifier{
       println("--------------------------")
     }
 
-    //val delimiter = ''
     val conf = new SparkConf(false).setMaster(args(0)).setAppName("Word2Vec")
     val sc = new SparkContext(conf)
+
+    //Broadcast the variables
+    val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
+    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
     // Load
     val trainPath = trainFilename
@@ -53,6 +63,8 @@ object Word2VecClassifier{
 
     val trainFile = sc.textFile(trainPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
     val testFile = sc.textFile(testPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
+
+    //trainFile.cache()
 
     // To sample
     def toTweet(segments: Array[String]) = segments match {
@@ -85,16 +97,18 @@ object Word2VecClassifier{
 
     var word2vecModel:Word2VecModel = null
 
+    reviewWordsPairs.cache()
+
     try {
-      word2vecModel = Word2VecModel.load(sc, _modelFilename)
-      println(s"Model file found:${_modelFilename}. Loading model.")
+      word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+      println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
     }
     catch{
       case ioe: IOException =>
-          println(s"Model not found at ${_modelFilename}. Creating model.")
+          println(s"Model not found at ${bcWord2VecModelFilename.value}. Creating model.")
           word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
-          word2vecModel.save(sc, _modelFilename);
-          println(s"Saved model as ${_modelFilename} .")
+          word2vecModel.save(sc, bcWord2VecModelFilename.value);
+          println(s"Saved model as ${bcWord2VecModelFilename.value} .")
     }
 
 
@@ -145,21 +159,38 @@ object Word2VecClassifier{
     //import spark.implicits._
 
     //val (logisticRegressionPredictions, start) = NFoldBasedWord2VecClassifier.GeneratePredictions(trainingSet, testSet, sc)
-    val (logisticRegressionPredictions, start) = GeneratePredictions(trainingSet, testSet)
+    val (logisticRegressionPredictions, start) = GeneratePredictions(trainingSet, testSet, sc, bcNumberOfClasses.value, bcLRClassifierModelFilename.value)
 
-    GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression")
+    GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression", bcNumberOfClasses.value)
 
     println("<---- done")
     val end = System.currentTimeMillis()
-    println((end-start)/1000.0 + " seconds")
-    Thread.sleep(10000)
+    println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
+    //Thread.sleep(10000)
   }
 
-  def GeneratePredictions(trainingData: RDD[LabeledPoint], testData: RDD[LabeledPoint]): (RDD[(Double, Double)], Long) =
+  def GeneratePredictions(trainingData: RDD[LabeledPoint],
+                          testData: RDD[LabeledPoint],
+                          sc:SparkContext,
+                          bcNumberOfClasses:Int,
+                          bcLRClassifierModelFilename:String):
+  (RDD[(Double, Double)], Long) =
     {
-      val logisticRegressionModel = new LogisticRegressionWithLBFGS()
-      .setNumClasses(_numOfClasses)
-      .run(trainingData)
+      var logisticRegressionModel: LogisticRegressionModel = null
+
+      try {
+      logisticRegressionModel =  LogisticRegressionModel.load(sc, bcLRClassifierModelFilename)
+      println(s"Classifier Model file found:${bcLRClassifierModelFilename}. Loading model.")
+    }
+    catch{
+      case ioe: IOException =>
+          println(s"Classifier Model not found at ${bcLRClassifierModelFilename}. Creating model.")
+          logisticRegressionModel =  new LogisticRegressionWithLBFGS()
+          .setNumClasses(bcNumberOfClasses)
+          .run(trainingData)
+          logisticRegressionModel.save(sc, bcLRClassifierModelFilename);
+          println(s"Saved classifier  model as ${bcLRClassifierModelFilename} .")
+    }
 
 
     val start = System.currentTimeMillis()
@@ -171,12 +202,15 @@ object Word2VecClassifier{
       return (logisticRegressionPredictions, start)
     }
 
-  def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)],classifierType : String): Unit = {
+  def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)]
+                                ,classifierType : String,
+                                bcNumberOfClasses:Int)
+  : Unit = {
     // Get evaluation metrics.
     val metrics = new MulticlassMetrics(predictionAndLabels)
     //val uniqueLabels = predictionAndLabels.map(x => x._1).
 
-    for (i <- 0 to _numOfClasses - 1) {
+    for (i <- 0 to bcNumberOfClasses - 1) {
     //for (i <- uniqueLabels) {
       val classLabel = i
       println(s"\n***********   Class:$classLabel   *************")
