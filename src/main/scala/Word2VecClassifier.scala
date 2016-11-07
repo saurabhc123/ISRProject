@@ -99,7 +99,7 @@ object Word2VecClassifier{
 
     var word2vecModel:Word2VecModel = null
 
-    reviewWordsPairs.repartition(partitionCount)
+    //reviewWordsPairs.repartition(partitionCount)
     reviewWordsPairs.cache()
 
     try {
@@ -141,7 +141,7 @@ object Word2VecClassifier{
     // Run training algorithm to build the model
 
 
-
+    trainingSet.repartition(partitionCount)
 
 
 
@@ -155,7 +155,7 @@ object Word2VecClassifier{
     }
     val testSet = featuresPairTest.values
     testSet.cache()
-    testSet.repartition(partitionCount)
+    //testSet.repartition(partitionCount)
 
     //val trainingRDD = trainingSet.toJavaRDD()
     //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
