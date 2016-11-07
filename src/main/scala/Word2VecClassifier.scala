@@ -36,6 +36,7 @@ object Word2VecClassifier{
     val trainFilename = args(1)
     val testFilename = args(2)
     _numberOfClasses = args(3).toInt
+    val partitionCount = 4;
 
 
 
@@ -61,10 +62,11 @@ object Word2VecClassifier{
     // Load text
     def skipHeaders(idx: Int, iter: Iterator[String]) = if (idx == 0) iter.drop(1) else iter
 
-    val trainFile = sc.textFile(trainPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
-    val testFile = sc.textFile(testPath) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
+    val trainFile = sc.textFile(trainPath, partitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
+    val testFile = sc.textFile(testPath, partitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
 
     //trainFile.cache()
+
 
     // To sample
     def toTweet(segments: Array[String]) = segments match {
@@ -97,6 +99,7 @@ object Word2VecClassifier{
 
     var word2vecModel:Word2VecModel = null
 
+    reviewWordsPairs.repartition(partitionCount)
     reviewWordsPairs.cache()
 
     try {
@@ -151,6 +154,8 @@ object Word2VecClassifier{
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
     val testSet = featuresPairTest.values
+    testSet.cache()
+    testSet.repartition(partitionCount)
 
     //val trainingRDD = trainingSet.toJavaRDD()
     //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
@@ -185,9 +190,7 @@ object Word2VecClassifier{
     catch{
       case ioe: IOException =>
           println(s"Classifier Model not found at ${bcLRClassifierModelFilename}. Creating model.")
-          logisticRegressionModel =  new LogisticRegressionWithLBFGS()
-          .setNumClasses(bcNumberOfClasses)
-          .run(trainingData)
+          logisticRegressionModel =  GenerateOptimizedModel(trainingData, bcNumberOfClasses)
           logisticRegressionModel.save(sc, bcLRClassifierModelFilename);
           println(s"Saved classifier  model as ${bcLRClassifierModelFilename} .")
     }
@@ -199,8 +202,26 @@ object Word2VecClassifier{
       (prediction, label)
     }
 
-      return (logisticRegressionPredictions, start)
+      (logisticRegressionPredictions, start)
     }
+
+  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
+  : LogisticRegressionModel = {
+
+    /*val foldCount = 10
+    //Break the trainingData into n-folds
+    for (i <- 1 to foldCount) {
+      val setSize = trainingData.count()
+      val subTrainData = trainingData.fo
+
+    }*/
+
+
+
+    new LogisticRegressionWithLBFGS()
+      .setNumClasses(bcNumberOfClasses)
+      .run(trainingData)
+  }
 
   def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)]
                                 ,classifierType : String,
