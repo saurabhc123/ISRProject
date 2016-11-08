@@ -11,6 +11,7 @@ object SparkGrep {
 		}
 		val start = System.currentTimeMillis()
 		Word2VecClassifier.run(args, '|')
+		//DataRetriever.retrieveTweets("90").foreach(println);
 		//MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
