@@ -36,7 +36,7 @@ object Word2VecClassifier{
     val trainFilename = args(1)
     val testFilename = args(2)
     _numberOfClasses = args(3).toInt
-    val partitionCount = 4;
+    val partitionCount = 128
 
 
 
@@ -47,8 +47,8 @@ object Word2VecClassifier{
       println("--------------------------")
     }
 
-    val conf = new SparkConf(false).setMaster(args(0)).setAppName("Word2Vec")
-    val sc = new SparkContext(conf)
+    //val conf = new SparkConf(false)/*.setMaster(args(0))*/.setAppName("Word2Vec")
+    val sc = new SparkContext(/*conf*/)
 
     //Broadcast the variables
     val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
@@ -56,7 +56,7 @@ object Word2VecClassifier{
     val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
     // Load
-    val trainPath = trainFilename
+    val trainPath =  trainFilename
     val testPath = testFilename
 
     // Load text
@@ -121,7 +121,7 @@ object Word2VecClassifier{
 
     def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
 
-    def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.asBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
+    def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
