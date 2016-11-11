@@ -5,14 +5,14 @@ import org.apache.spark.SparkContext
 object SparkGrep {
 	def main(args: Array[String]) {
 
-		if (args.length < 3) {
-			System.err.println("Usage: SparkGrep <host> <input_file> <numberofClasses>")
+		if (args.length < 2) {
+			System.err.println("Usage: SparkGrep <collection number to process> <number of classes>")
 			System.exit(1)
 		}
 		val start = System.currentTimeMillis()
 		//Word2VecClassifier.run(args, '|')
 		val sc = new SparkContext()
-		DataWriter.writeTweets(Word2VecClassifier.predict(CleanTweet.clean(DataRetriever.retrieveTweets("20",sc),sc),sc))
+		DataWriter.writeTweets(Word2VecClassifier.predict(CleanTweet.clean(DataRetriever.retrieveTweets(args(0),sc),sc),sc))
 		//MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
