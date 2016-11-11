@@ -37,11 +37,12 @@ object CleanTweet {
     new PrintWriter(outName) { write(keys.zip(cleaned).map(va => va._1.toString +  ";" +va._2.toString).collect()
       .mkString("\n")); close() }
   }
-  def clean(tweets: Iterator[Tweet]): RDD[Tweet] = {
+  def clean(tweets: RDD[Tweet],sc : SparkContext): RDD[Tweet] = {
 
-    val conf = new SparkConf().setAppName("SparkGrep").setMaster("local[*]")
-    val sc = new SparkContext(conf)
-    var tweetsRDD = sc.parallelize(tweets.toList)
+    //val conf = new SparkConf()/*.setAppName("SparkGrep").setMaster("local[*]")*/
+    //val sc = new SparkContext(/*conf*/)
+    tweets.foreach(println)
+    val tweetsRDD = tweets
     val keys = tweetsRDD.map(tweet => tweet.id)
     val values = tweetsRDD.map(tweet => tweet.tweetText)
     keys.zip(getCleanedTweets(values,sc)).map(va => Tweet(va._1.toString,va._2.toString))

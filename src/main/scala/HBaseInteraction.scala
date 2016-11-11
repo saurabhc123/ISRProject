@@ -9,8 +9,8 @@ import org.apache.hadoop.hbase.filter.CompareFilter
 import org.apache.hadoop.hbase.filter.BinaryComparator
 
 
-
-class HBaseInteraction(tableName: String) {
+@SerialVersionUID(107L)
+class HBaseInteraction(tableName: String) extends Serializable{
 	val tn = tableName
 
 	// Get connection to HBase Table using connection factory

@@ -1,5 +1,5 @@
 
-
+//package isr.project
 package org.apache.spark.mllib.linalg
 
 import java.io.IOException
@@ -11,10 +11,10 @@ import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-
+import isr.project.Tweet
 import scala.util.Try
 
-case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
+//case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
 
@@ -22,6 +22,65 @@ object Word2VecClassifier{
   var _numberOfClasses = 2
   var _word2VecModelFilename = "data/word2vec.model"
   val _lrModelFilename = "data/lrclassifier.model"
+
+def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
+    //val sc = new SparkContext()
+
+    //Broadcast the variables
+    val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
+    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
+
+    def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
+
+    def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
+
+    val cleanTestTweets = tweets map cleanTweetHtml
+    val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+    println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
+    println("Finished Training")
+    println(word2vecModel.transform("hurricane"))
+
+    // Words only
+    def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduceOption((x, y) => s"$x $y")
+
+    def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText).getOrElse(""))
+
+    def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
+
+    def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
+
+    def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
+
+    val wordOnlyTestSample = cleanTestTweets map wordOnlySample
+    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
+    val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
+    val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
+    val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
+    val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
+    val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
+      case (features, Tweet(id, tweetText, label)) => (Tweet(id,tweetText,label), features)
+    }
+    val testSet = featuresPairTest.values
+    testSet.cache()
+
+
+
+    val logisticRegressionModel =  LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
+    println(s"Classifier Model file found:$bcLRClassifierModelFilename. Loading model.")
+
+    val start = System.currentTimeMillis()
+    val logisticRegressionPredictions = testSet.map { case (Tweet(id,tweetText,label), features) =>
+      val prediction = logisticRegressionModel.predict(features)
+      Tweet(id,tweetText,Option(prediction))
+    }
+    println("<---- done")
+    val end = System.currentTimeMillis()
+    println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
+
+    return logisticRegressionPredictions
+  }
+
 
   def run(args: Array[String], delimiter: Char) {
 
@@ -37,7 +96,7 @@ object Word2VecClassifier{
     val testFilename = args(2)
     _numberOfClasses = args(3).toInt
     val partitionCount = 128
-
+    val trainingPartitionCount = 8
 
 
 
@@ -62,7 +121,7 @@ object Word2VecClassifier{
     // Load text
     def skipHeaders(idx: Int, iter: Iterator[String]) = if (idx == 0) iter.drop(1) else iter
 
-    val trainFile = sc.textFile(trainPath, partitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
+    val trainFile = sc.textFile(trainPath, trainingPartitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
     val testFile = sc.textFile(testPath, partitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
 
     //trainFile.cache()
@@ -141,7 +200,7 @@ object Word2VecClassifier{
     // Run training algorithm to build the model
 
 
-    trainingSet.repartition(partitionCount)
+    trainingSet.repartition(trainingPartitionCount)
 
 
 
