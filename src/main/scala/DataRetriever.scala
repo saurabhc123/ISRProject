@@ -1,40 +1,11 @@
 package isr.project
-import org.apache.hadoop.hbase.client.Result
-import org.apache.spark.rdd.RDD
+import org.apache.hadoop.hbase.client.{Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
-import scala.collection.JavaConversions._
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.Result
 import org.apache.spark.rdd.RDD
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil
-import scala.collection.JavaConversions._
-import org.apache.hadoop.hbase.mapreduce.TableInputFormat
 import org.apache.spark.SparkContext
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.Result
-import org.apache.spark.rdd.RDD
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.hadoop.hbase.TableName
-import org.apache.hadoop.hbase.client._
-import org.apache.hadoop.hbase.filter.{BinaryComparator, CompareFilter, SingleColumnValueFilter}
-import org.apache.hadoop.hbase.util.Bytes
+import unicredit.spark.hbase._
 
 import scala.collection.JavaConversions._
-import org.apache.hadoop.hbase.mapreduce.TableInputFormat
-import org.apache.spark.SparkContext
-import java.io.{ByteArrayOutputStream, DataOutputStream}
-import java.lang.String
-
-import org.apache.hadoop.hbase.client.Scan
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable
-import org.apache.hadoop.hbase.client.Result
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil
-import org.apache.hadoop.hbase.mapreduce.TableInputFormat
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos
-import org.apache.hadoop.hbase.util.Base64
 /**
   * Created by Eric on 11/8/2016.
   */
@@ -48,6 +19,12 @@ object DataRetriever {
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
     val interactor = new HBaseInteraction(_tableName)
     println("MAKING INTERACTOR")
+    val scanner = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
+    val cols = Map(
+      _colFam -> Set(_col)
+    )
+    val rdd = sc.hbase[String](_tableName,cols,scanner)
+    return rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))
     val result  = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
     sc.parallelize(result.iterator().map(r => rowToTweetConverter(r)).toList)
   }
