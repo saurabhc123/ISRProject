@@ -1,5 +1,6 @@
 package isr.project
 import org.apache.spark.rdd.RDD
+import unicredit.spark.hbase._
 /**
   * Created by Eric on 11/9/2016.
   */
@@ -9,8 +10,11 @@ object DataWriter {
     val _tableName: String = "cla-test-table"
     val _colFam : String = "cla-col-fam"
     val _col : String = "classification"
-    val interactor = new HBaseInteraction(_tableName)
-    tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
+    implicit val config = HBaseConfig()
+    val rdd: RDD[(String, Map[String, String])] = tweets.map({tweet => tweet.id -> Map(_col -> labelMapper(tweet.label.getOrElse(999999.0)))})
+    rdd.toHBase(_tableName, _colFam)
+    //val interactor = new HBaseInteraction(_tableName)
+    //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     println("Wrote to database " + tweets.count() + " tweets")
  }
   def writeTweetToDatabase(tweet : Tweet, interactor: HBaseInteraction, colFam: String, col: String): Unit ={
