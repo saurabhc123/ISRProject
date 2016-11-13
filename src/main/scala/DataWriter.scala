@@ -11,8 +11,9 @@ object DataWriter {
     val _colFam : String = "cla-col-fam"
     val _col : String = "classification"
     implicit val config = HBaseConfig()
-    val rdd: RDD[(String, Map[String, String])] = tweets.map({tweet => tweet.id -> Map(_col -> labelMapper(tweet.label.getOrElse(999999.0)))})
-    rdd.toHBase(_tableName, _colFam)
+    val headers = Seq(_col)
+    val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
+    rdd.toHBaseBulk(_tableName, _colFam, headers)
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     println("Wrote to database " + tweets.count() + " tweets")
