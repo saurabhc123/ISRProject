@@ -25,8 +25,8 @@ object DataRetriever {
       _colFam -> Set(_col)
     )
     val rdd = sc.hbase[String](_tableName,cols,scanner)
-    rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).foreach(println)
-    rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))
+    //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).foreach(println)
+    rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).filter(tweet => tweet.tweetText.trim.isEmpty)
   }
 
   def rowToTweetConverter(result : Result): Tweet ={
