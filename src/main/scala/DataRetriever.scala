@@ -17,6 +17,7 @@ object DataRetriever {
 
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
+    implicit val config = HBaseConfig()
     val interactor = new HBaseInteraction(_tableName)
     println("MAKING INTERACTOR")
     val scanner = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
@@ -24,9 +25,8 @@ object DataRetriever {
       _colFam -> Set(_col)
     )
     val rdd = sc.hbase[String](_tableName,cols,scanner)
-    return rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))
-    val result  = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
-    sc.parallelize(result.iterator().map(r => rowToTweetConverter(r)).toList)
+    rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).foreach(println)
+    rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))
   }
 
   def rowToTweetConverter(result : Result): Tweet ={
