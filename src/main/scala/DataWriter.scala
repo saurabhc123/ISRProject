@@ -3,6 +3,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{HTable, Put}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.rdd.RDD
+import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 import unicredit.spark.hbase._
 /**
   * Created by Eric on 11/9/2016.
@@ -20,17 +22,17 @@ object DataWriter {
     tweets.foreachPartition(tweetRDD => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf,_tableName)
-      tweetRDD.foreach(tweet => writeTweetToDatabase(tweet,_colFam,_col,table))
+      table.put(tweetRDD.map(tweet => writeTweetToDatabase(tweet,_colFam,_col,table)).toList)
     })
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
  }
-  def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Unit ={
+  def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Put ={
     putValueAt(colFam,col,tweet.id,labelMapper(tweet.label.getOrElse(9999999.0)), table)
   }
 
-  def putValueAt(columnFamily: String, column: String, rowKey: String, value: String, table: HTable) = {
+  def putValueAt(columnFamily: String, column: String, rowKey: String, value: String, table: HTable) : Put = {
     // Make a new put object to handle adding data to the table
     // https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html
     val put = new Put(Bytes.toBytes(rowKey))
@@ -39,7 +41,7 @@ object DataWriter {
     put.add(Bytes.toBytes(columnFamily), Bytes.toBytes(column), Bytes.toBytes(value))
 
     // put the data in the table
-    table.put(put)
+    put
   }
 
 
