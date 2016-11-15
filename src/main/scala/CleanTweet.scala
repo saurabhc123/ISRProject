@@ -41,7 +41,7 @@ object CleanTweet {
 
     //val conf = new SparkConf()/*.setAppName("SparkGrep").setMaster("local[*]")*/
     //val sc = new SparkContext(/*conf*/)
-    tweets.foreach(println)
+    //tweets.foreach(println)
     val tweetsRDD = tweets
     val keys = tweetsRDD.map(tweet => tweet.id)
     val values = tweetsRDD.map(tweet => tweet.tweetText)
