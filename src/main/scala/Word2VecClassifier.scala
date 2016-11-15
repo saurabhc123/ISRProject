@@ -28,7 +28,7 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
 
     //Broadcast the variables
     val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
-    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    //val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
     def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
@@ -36,8 +36,8 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
 
     val cleanTestTweets = tweets map cleanTweetHtml
-    val word2vecModel = sc.broadcast(Word2VecModel.load(sc, bcWord2VecModelFilename.value))
-    println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
+    val word2vecModel = sc.broadcast(Word2VecModel.load(sc, _word2VecModelFilename))
+    println(s"Model file found:${_word2VecModelFilename}. Loading model.")
     println("Finished Training")
     println(word2vecModel.value.transform("hurricane"))
 
