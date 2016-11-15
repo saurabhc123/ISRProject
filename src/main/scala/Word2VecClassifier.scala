@@ -62,7 +62,6 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
       case (features, Tweet(id, tweetText, label)) => (Tweet(id,tweetText,label), features)
     }
     val testSet = featuresPairTest.values
-    testSet.cache()
 
 
 

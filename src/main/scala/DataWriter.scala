@@ -22,7 +22,7 @@ object DataWriter {
     tweets.foreachPartition(tweetRDD => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf,_tableName)
-      table.put(tweetRDD.toList.map(tweet => writeTweetToDatabase(tweet,_colFam,_col,table)))
+      tweetRDD.map(tweet => writeTweetToDatabase(tweet,_colFam,_col,table)).foreach(table.put)
     })
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
