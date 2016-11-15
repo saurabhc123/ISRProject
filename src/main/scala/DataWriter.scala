@@ -7,15 +7,15 @@ import unicredit.spark.hbase._
 object DataWriter {
 
   def writeTweets(tweets: RDD[Tweet]): Unit ={
-    val _tableName: String = "cla-test-table"
-    val _colFam : String = "cla-col-fam"
-    val _col : String = "classification"
-    implicit val config = HBaseConfig()
-    val headers = Seq(_col)
-    val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
-    rdd.toHBase(_tableName, _colFam, headers)
-    //val interactor = new HBaseInteraction(_tableName)
-    //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
+    val _tableName: String = "ideal-cs5604f16"
+    val _colFam : String = "clean-tweet"
+    val _col : String = "real-world-events"
+    //implicit val config = HBaseConfig()
+    //val headers = Seq(_col)
+    //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
+    //rdd.toHBase(_tableName, _colFam, headers)
+    val interactor = new HBaseInteraction(_tableName)
+    tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     println("Wrote to database " + tweets.count() + " tweets")
  }
   def writeTweetToDatabase(tweet : Tweet, interactor: HBaseInteraction, colFam: String, col: String): Unit ={
