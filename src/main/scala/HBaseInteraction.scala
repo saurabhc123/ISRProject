@@ -54,6 +54,7 @@ class HBaseInteraction(tableName: String) extends Serializable{
 		// Filter according to the collection number
 		scanner.setFilter(new SingleColumnValueFilter(Bytes.toBytes(columnFamily), Bytes.toBytes(column), CompareFilter.CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(value))))
 
+
 		// Get the scanner back from the table
 		// https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ResultScanner.html
 		// Note that resultScanner implements iterable, so you can process individual elements that way
@@ -65,7 +66,11 @@ class HBaseInteraction(tableName: String) extends Serializable{
 	def getTweetsWithClass(classStr: String,classCol: String, classColFam:String, columnFamily: String, column: String): ResultScanner = {
 		val scanner = new Scan()
 		scanner.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column))
-		scanner.setFilter(new SingleColumnValueFilter(Bytes.toBytes(classColFam), Bytes.toBytes(classCol), CompareFilter.CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(classStr))))
+		val filter = new SingleColumnValueFilter(Bytes.toBytes(classColFam), Bytes.toBytes(classCol), CompareFilter.CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(classStr)))
+		filter.setFilterIfMissing(true)
+		filter.setLatestVersionOnly(true)
+		scanner.setFilter(filter)
+		scanner.setMaxResultSize(200)
 		val resultScanner = table.getScanner(scanner)
 		resultScanner
 	}
