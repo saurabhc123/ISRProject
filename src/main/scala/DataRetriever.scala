@@ -13,6 +13,9 @@ object DataRetriever {
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
+  val _class: String = "A CLASS"
+  val _classCol: String = "real-world-events"
+  val _classColFam : String = "clean-tweet"
 
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
@@ -24,7 +27,7 @@ object DataRetriever {
       _colFam -> Set(_col)
     )*/
     //val rdd = sc.hbase[String](_tableName,cols,scanner)
-    val result  = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
+    val result  = interactor.getTweetsWithClass(_class, _classCol, _classColFam, _colFam, _col)
     sc.parallelize(result.iterator().map(r => rowToTweetConverter(r)).toList)
     //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).foreach(println)
     //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))/*.repartition(sc.defaultParallelism)*/.filter(tweet => tweet.tweetText.trim.isEmpty)

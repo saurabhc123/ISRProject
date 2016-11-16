@@ -62,6 +62,14 @@ class HBaseInteraction(tableName: String) extends Serializable{
 		return resultScanner
 	}
 
+	def getTweetsWithClass(classStr: String,classCol: String, classColFam:String, columnFamily: String, column: String): ResultScanner = {
+		val scanner = new Scan()
+		scanner.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column))
+		scanner.setFilter(new SingleColumnValueFilter(Bytes.toBytes(classColFam), Bytes.toBytes(classCol), CompareFilter.CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(classStr))))
+		val resultScanner = table.getScanner(scanner)
+		resultScanner
+	}
+
   def getRowsBetweenPrefix(prefix: String, columnFamily: String, column: String): ResultScanner = {
     val scanner = new Scan(Bytes.toBytes(prefix), Bytes.toBytes(prefix + '0'))
     scanner.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes(column))
