@@ -40,9 +40,9 @@ object DataRetriever {
 
     val hBaseRDD = sc.newAPIHadoopRDD(conf, classOf[TableInputFormat],
       classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
-      classOf[org.apache.hadoop.hbase.client.Result]).cache()
+      classOf[org.apache.hadoop.hbase.client.Result])
+    hBaseRDD.cache()
       val resultOnlyRdd = hBaseRDD.map(e => e._2)
-    resultOnlyRdd.collect()
 
     //val repartitionedRdd = hBaseRDD.cache().repartition(_partitionCount)
     resultOnlyRdd.map(e => {
