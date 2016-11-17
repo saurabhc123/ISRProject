@@ -42,12 +42,13 @@ object DataRetriever {
     val hBaseRDD = sc.newAPIHadoopRDD(conf, classOf[TableInputFormat],
       classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
       classOf[org.apache.hadoop.hbase.client.Result]).map(e => e._2)
+    hBaseRDD.cache().repartition(_partitionCount)
     hBaseRDD.map(e => {
       val cell = e.getColumnLatestCell(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
       val key = Bytes.toString(cell.getRowArray, cell.getRowOffset, cell.getRowLength)
       val words = Bytes.toString(cell.getValueArray, cell.getValueOffset, cell.getValueLength)
       Tweet(key,words)
-      }).repartition(_partitionCount)
+      })//.repartition(_partitionCount)
   }
 
   def rowToTweetConverter(result : Result): Tweet ={
