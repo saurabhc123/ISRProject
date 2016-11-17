@@ -19,7 +19,9 @@ object SparkGrep {
     dataIterator.grouped(group_size).foreach(
       tweetList => {
         val tweetRdd = sc.parallelize(tweetList)
-        DataWriter.writeTweets(tweetRdd)
+        val cleanedRdd = CleanTweet.clean(tweetRdd,sc)
+        val predictedRdd = Word2VecClassifier.predict(cleanedRdd,sc)
+        DataWriter.writeTweets(predictedRdd)
       }
     )
 		//val cleaned = CleanTweet.clean(data,sc)
