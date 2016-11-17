@@ -1,8 +1,15 @@
 package isr.project
+import java.io.{ByteArrayOutputStream, IOException}
+
+import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{Result, Scan}
+import org.apache.hadoop.hbase.mapreduce.TableInputFormat
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
+import org.apache.hadoop.hbase.util.Base64
 
 import scala.collection.JavaConversions._
 /**
@@ -13,21 +20,26 @@ object DataRetriever {
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
-
+  def convertScanToString(scan: Scan): String = {
+    val proto: ClientProtos.Scan = ProtobufUtil.toScan(scan)
+    Base64.encodeBytes(proto.toByteArray)
+  }
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
-    //implicit val config = HBaseConfig()
-    val interactor = new HBaseInteraction(_tableName)
-    println("MAKING INTERACTOR")
-    /*val scanner = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
-    val cols = Map(
-      _colFam -> Set(_col)
-    )*/
-    //val rdd = sc.hbase[String](_tableName,cols,scanner)
-    val result  = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
-    sc.parallelize(result.iterator().map(r => rowToTweetConverter(r)).toList)
-    //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).foreach(println)
-    //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))/*.repartition(sc.defaultParallelism)*/.filter(tweet => tweet.tweetText.trim.isEmpty)
+    getTweetRDD(collectionID, sc)
+  }
+
+  def getTweetRDD(prefix: String, sc : SparkContext): RDD[Tweet] = {
+    val conf = HBaseConfiguration.create()
+    conf.set(TableInputFormat.INPUT_TABLE, _tableName)
+    val scanner = new Scan(Bytes.toBytes(prefix), Bytes.toBytes(prefix + '0'))
+    scanner.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
+    conf.set(TableInputFormat.SCAN, convertScanToString(scanner))
+
+    val hBaseRDD = sc.newAPIHadoopRDD(conf, classOf[TableInputFormat],
+      classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
+      classOf[org.apache.hadoop.hbase.client.Result])
+    hBaseRDD.map(e => rowToTweetConverter(e._2))
   }
 
   def rowToTweetConverter(result : Result): Tweet ={
