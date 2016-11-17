@@ -43,6 +43,7 @@ object DataRetriever {
       classOf[org.apache.hadoop.hbase.client.Result])
       hBaseRDD.cache()
       val resultOnlyRdd = hBaseRDD.map(e => e._2)
+    resultOnlyRdd.collect()
 
     //val repartitionedRdd = hBaseRDD.cache().repartition(_partitionCount)
     resultOnlyRdd.map(e => {
