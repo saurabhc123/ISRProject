@@ -3,7 +3,6 @@ import org.apache.hadoop.hbase.client.{Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
-import unicredit.spark.hbase._
 
 import scala.collection.JavaConversions._
 /**
