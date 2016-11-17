@@ -26,7 +26,11 @@ object DataRetriever {
     val proto: ClientProtos.Scan = ProtobufUtil.toScan(scan)
     Base64.encodeBytes(proto.toByteArray)
   }
-
+  def retrieveTweetIterator(collectionID: String): Iterator[Tweet] = {
+    val interactor = new HBaseInteraction(_tableName)
+    val result = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
+    result.map(row => rowToTweetConverter(row)).toIterator
+  }
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
     getTweetRDD(collectionID, sc)
   }

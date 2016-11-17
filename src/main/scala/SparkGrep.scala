@@ -14,12 +14,18 @@ object SparkGrep {
 		val conf = new SparkConf()
 		conf.set("defaultMinPartitions", "10")
 		val sc = new SparkContext(conf)
-
+  val group_size = 1000
 		println(s"Default Partition Count:${sc.defaultMinPartitions}")
-		val data = DataRetriever.retrieveTweets(args(0),sc)
+		val dataIterator = DataRetriever.retrieveTweetIterator(args(0))
+    dataIterator.grouped(1000).foreach(
+      tweetList => {
+        val tweetRdd = sc.parallelize(tweetList)
+        DataWriter.writeTweets(tweetRdd)
+      }
+    )
 		//val cleaned = CleanTweet.clean(data,sc)
 		//val predicted = Word2VecClassifier.predict(cleaned,sc)
-		DataWriter.writeTweets(data)
+
 		//MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
