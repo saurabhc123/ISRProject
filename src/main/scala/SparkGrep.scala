@@ -13,7 +13,7 @@ object SparkGrep {
 		//Word2VecClassifier.run(args, '|')
 		val conf = new SparkConf()
 		val sc = new SparkContext(conf)
-  val group_size = 1000
+  val group_size = 10000
 		println(s"Default Partition Count:${sc.defaultMinPartitions}")
 		val dataIterator = DataRetriever.retrieveTweetIterator(args(0))
     dataIterator.grouped(group_size).foreach(
