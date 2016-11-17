@@ -26,7 +26,7 @@ object DataWriter {
       val table = new HTable(hbaseConf,_tableName)
       table.put(writeTweetToDatabase(tweet,_colFam,_col,table))
     }
-    ).collect()
+    ).take(1)
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
