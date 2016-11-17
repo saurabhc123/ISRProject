@@ -3,9 +3,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{HTable, Put}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.rdd.RDD
-import scala.collection.JavaConversions._
-import scala.collection.mutable.ListBuffer
-import unicredit.spark.hbase._
 /**
   * Created by Eric on 11/9/2016.
   */
