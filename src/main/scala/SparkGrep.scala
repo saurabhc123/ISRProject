@@ -12,6 +12,7 @@ object SparkGrep {
 		val start = System.currentTimeMillis()
 		//Word2VecClassifier.run(args, '|')
 		val sc = new SparkContext()
+		println(s"Default Partition Count:${sc.defaultMinPartitions}")
 		val data = DataRetriever.retrieveTweets(args(0),sc)
 		val cleaned = CleanTweet.clean(data,sc)
 		val predicted = Word2VecClassifier.predict(cleaned,sc)
