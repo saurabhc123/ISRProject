@@ -21,11 +21,12 @@ object DataWriter {
     //rdd.toHBase(_tableName, _colFam, headers)
 
     tweets.repartition(120).map(tweet => {
+
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf,_tableName)
       table.put(writeTweetToDatabase(tweet,_colFam,_col,table))
     }
-    )
+    ).collect()
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
