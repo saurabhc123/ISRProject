@@ -17,9 +17,10 @@ import scala.collection.JavaConversions._
   */
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
-  var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
-  var _colFam : String = "tweet"
-  var _col : String = "cleantext" /*"text"*/
+  val _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
+  val _colFam : String = "tweet"
+  val _col : String = "cleantext" /*"text"*/
+  val _partitionCount = 120
   def convertScanToString(scan: Scan): String = {
     val proto: ClientProtos.Scan = ProtobufUtil.toScan(scan)
     Base64.encodeBytes(proto.toByteArray)
@@ -39,7 +40,7 @@ object DataRetriever {
     val hBaseRDD = sc.newAPIHadoopRDD(conf, classOf[TableInputFormat],
       classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
       classOf[org.apache.hadoop.hbase.client.Result])
-    hBaseRDD.map(e => rowToTweetConverter(e._2))
+    hBaseRDD.map(e => rowToTweetConverter(e._2)).repartition(_partitionCount)
   }
 
   def rowToTweetConverter(result : Result): Tweet ={
