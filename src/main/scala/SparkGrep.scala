@@ -17,9 +17,9 @@ object SparkGrep {
 
 		println(s"Default Partition Count:${sc.defaultMinPartitions}")
 		val data = DataRetriever.retrieveTweets(args(0),sc)
-		//val cleaned = CleanTweet.clean(data,sc)
-		//val predicted = Word2VecClassifier.predict(cleaned,sc)
-		DataWriter.writeTweets(data)
+		val cleaned = CleanTweet.clean(data,sc)
+		val predicted = Word2VecClassifier.predict(cleaned,sc)
+		DataWriter.writeTweets(predicted)
 		//MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
