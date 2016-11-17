@@ -35,6 +35,8 @@ object DataRetriever {
     conf.set(TableInputFormat.INPUT_TABLE, _tableName)
     val scanner = new Scan(Bytes.toBytes(prefix), Bytes.toBytes(prefix + '0'))
     scanner.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
+    scanner.setCaching(500)
+    scanner.setCacheBlocks(false)
     conf.set(TableInputFormat.SCAN, convertScanToString(scanner))
 
     val hBaseRDD = sc.newAPIHadoopRDD(conf, classOf[TableInputFormat],
