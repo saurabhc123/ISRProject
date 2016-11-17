@@ -21,6 +21,7 @@ object DataRetriever {
   val _colFam : String = "tweet"
   val _col : String = "cleantext" /*"text"*/
   val _partitionCount = 120
+  val _maxResultSize = 500
   def convertScanToString(scan: Scan): String = {
     val proto: ClientProtos.Scan = ProtobufUtil.toScan(scan)
     Base64.encodeBytes(proto.toByteArray)
@@ -35,8 +36,6 @@ object DataRetriever {
     conf.set(TableInputFormat.INPUT_TABLE, _tableName)
     val scanner = new Scan(Bytes.toBytes(prefix), Bytes.toBytes(prefix + '0'))
     scanner.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
-    scanner.setCaching(500)
-    scanner.setCacheBlocks(false)
     conf.set(TableInputFormat.SCAN, convertScanToString(scanner))
 
     val hBaseRDD = sc.newAPIHadoopRDD(conf, classOf[TableInputFormat],
