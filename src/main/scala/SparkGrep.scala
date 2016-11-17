@@ -12,12 +12,11 @@ object SparkGrep {
 		val start = System.currentTimeMillis()
 		//Word2VecClassifier.run(args, '|')
 		val conf = new SparkConf()
-		conf.set("defaultMinPartitions", "10")
 		val sc = new SparkContext(conf)
   val group_size = 1000
 		println(s"Default Partition Count:${sc.defaultMinPartitions}")
 		val dataIterator = DataRetriever.retrieveTweetIterator(args(0))
-    dataIterator.grouped(1000).foreach(
+    dataIterator.grouped(group_size).foreach(
       tweetList => {
         val tweetRdd = sc.parallelize(tweetList)
         DataWriter.writeTweets(tweetRdd)

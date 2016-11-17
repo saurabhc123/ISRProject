@@ -20,13 +20,13 @@ object DataWriter {
     //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
     //rdd.toHBase(_tableName, _colFam, headers)
 
-    tweets.map(tweet => {
+    tweets.foreachPartition(tweet => {
 
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf,_tableName)
-      table.put(writeTweetToDatabase(tweet,_colFam,_col,table))
+      table.put(tweet.map(e => writeTweetToDatabase(e,_colFam,_col,table)).toList)
     }
-    ).count()
+    )
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
