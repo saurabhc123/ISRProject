@@ -9,7 +9,33 @@ import unicredit.spark.hbase._
 /**
   * Created by Eric on 11/9/2016.
   */
+case class TweetProb(id: String, probList: List[Double])
 object DataWriter {
+
+  def writeTweetsProb(tweets: RDD[TweetProb]): Unit = {
+    val _tableName: String = "ideal-cs5604f16"
+    val _colFam : String = "clean-tweet"
+    val _col : String = "real-world-events"
+    val probCol = ""
+    val labels = "?;?"
+
+    tweets.foreachPartition(tweetRDD => {
+      val hbaseConf = HBaseConfiguration.create()
+      val table = new HTable(hbaseConf,_tableName)
+      tweetRDD.map(tweet => writeTweetWithProbToDatabase(tweet,_colFam,_col, probCol, labels)).foreach(table.put)
+    })
+  }
+
+  def writeTweetWithProbToDatabase(tweet: TweetProb, colFam : String, labelCol : String, probCol : String, labels: String): Put ={
+    val put = new Put(Bytes.toBytes(tweet.id))
+
+    // add data to the put
+    put.add(Bytes.toBytes(colFam), Bytes.toBytes(labelCol), Bytes.toBytes(labels))
+    put.add(Bytes.toBytes(colFam), Bytes.toBytes(probCol), Bytes.toBytes(tweet.probList.mkString(";")))
+
+    // put the data in the table
+    put
+  }
 
   def writeTweets(tweets: RDD[Tweet]): Unit ={
     val _tableName: String = "ideal-cs5604f16"
