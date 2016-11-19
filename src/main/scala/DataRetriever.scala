@@ -45,6 +45,7 @@ object DataRetriever {
 
     resultScanner.close()
     //val interactor = new HBaseInteraction(_tableName)
+
     return null
 
 
