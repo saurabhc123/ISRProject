@@ -31,6 +31,8 @@ object DataRetriever {
     while (continueLoop) {
       try {
         val results = resultScanner.next()
+        var rdd = sc.parallelize(results.raw())
+
         if (results == null)
           continueLoop = false
         else {
@@ -40,7 +42,9 @@ object DataRetriever {
       }
       catch {
         case e: Exception =>
-          e.printStackTrace()
+          println(e.printStackTrace())
+          println("Exception Encountered")
+          println(e.getMessage)
           continueLoop = false
       }
 
