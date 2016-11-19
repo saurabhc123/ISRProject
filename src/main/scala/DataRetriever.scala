@@ -1,10 +1,10 @@
 package isr.project
-import org.apache.hadoop.hbase.client.{Result, Scan}
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext
 
-import scala.collection.JavaConversions._
+import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.client.{HTable, Result, Scan}
+import org.apache.hadoop.hbase.util.Bytes
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 /**
   * Created by Eric on 11/8/2016.
   */
@@ -17,15 +17,24 @@ object DataRetriever {
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
     //implicit val config = HBaseConfig()
-    val interactor = new HBaseInteraction(_tableName)
-    println("MAKING INTERACTOR")
+    val scan = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
+    val hbaseConf = HBaseConfiguration.create()
+    val table = new HTable(hbaseConf,_tableName)
+    scan.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
+    val scanner = table.getScanner(scan)
+
+    println(s"Caching Info:${table.getScannerCaching}")
+    scanner.close()
+    //val interactor = new HBaseInteraction(_tableName)
+    println("Scanning results now.")
+    return null
     /*val scanner = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
     val cols = Map(
       _colFam -> Set(_col)
     )*/
     //val rdd = sc.hbase[String](_tableName,cols,scanner)
-    val result  = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
-    sc.parallelize(result.iterator().map(r => rowToTweetConverter(r)).toList)
+    //val result  = interactor.getRowsBetweenPrefix(collectionID, _colFam, _col)
+    //sc.parallelize(result.iterator().map(r => rowToTweetConverter(r)).toList)
     //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, ""))).foreach(println)
     //rdd.map(v => Tweet(v._1, v._2.getOrElse(_colFam, Map()).getOrElse(_col, "")))/*.repartition(sc.defaultParallelism)*/.filter(tweet => tweet.tweetText.trim.isEmpty)
   }
