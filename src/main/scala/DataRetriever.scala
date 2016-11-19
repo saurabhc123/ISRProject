@@ -4,6 +4,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{HTable, Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.rdd.RDD
 /**
   * Created by Eric on 11/8/2016.
@@ -31,12 +32,18 @@ object DataRetriever {
     while (continueLoop) {
       try {
         val results = resultScanner.next()
-        var rdd = sc.parallelize(results.raw())
-
+        //var resultTweets = rowToTweetConverter(resultScanner.iterator())
+        val rdd = sc.parallelize(resultScanner).map(r => rowToTweetConverter(r))
+        println("*********** Cleaning the tweets now. *****************")
+        val cleanTweets = CleanTweet.clean(rdd, sc)
+        println("*********** Predicting the tweets now. *****************")
+        val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc)
+        println("*********** Persisting the tweets now. *****************")
+        DataWriter.writeTweets(predictedTweets)
         if (results == null)
           continueLoop = false
         else {
-          totalRecordCount = totalRecordCount + _cachedRecordCount
+          totalRecordCount = totalRecordCount + 1
           println(results)
         }
       }
