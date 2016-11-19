@@ -22,7 +22,7 @@ object DataRetriever {
     val table = new HTable(hbaseConf,_tableName)
     scan.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
     val scanner = table.getScanner(scan)
-
+    table.setScannerCaching(5000)
     println(s"Caching Info:${table.getScannerCaching}")
     scanner.close()
     //val interactor = new HBaseInteraction(_tableName)
