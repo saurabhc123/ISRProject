@@ -10,10 +10,10 @@ import org.apache.spark.rdd.RDD
   */
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
+  val _cachedRecordCount = 5000
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
-
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
     //implicit val config = HBaseConfig()
@@ -21,18 +21,22 @@ object DataRetriever {
     val hbaseConf = HBaseConfiguration.create()
     val table = new HTable(hbaseConf,_tableName)
     scan.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
-    scan.setCaching(5000)
+    scan.setCaching(_cachedRecordCount)
     scan.setBatch(1)
     val resultScanner = table.getScanner(scan)
     println(s"Caching Info:${scan.getCaching} Batch Info: ${scan.getBatch}")
     println("Scanning results now.")
     var continueLoop = true
+    var totalRecordCount = 0
     while (continueLoop) {
       try {
         val results = resultScanner.next()
         if (results == null)
           continueLoop = false
-        println(results)
+        else {
+          totalRecordCount = totalRecordCount + _cachedRecordCount
+          println(results)
+        }
       }
       catch {
         case e: Exception =>
@@ -42,7 +46,7 @@ object DataRetriever {
 
     }
 
-
+    println(s"Total record count:${totalRecordCount}")
     resultScanner.close()
     //val interactor = new HBaseInteraction(_tableName)
 
