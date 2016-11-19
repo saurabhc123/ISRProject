@@ -1,17 +1,12 @@
 package isr.project
-import java.io.{ByteArrayOutputStream, IOException}
-
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{Result, Scan}
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.rdd.RDD
+import org.apache.hadoop.hbase.util.{Base64, Bytes}
 import org.apache.spark.SparkContext
-import org.apache.hadoop.hbase.util.Base64
-
-import scala.collection.JavaConversions._
+import org.apache.spark.rdd.RDD
 /**
   * Created by Eric on 11/8/2016.
   */
@@ -42,7 +37,7 @@ object DataRetriever {
       classOf[org.apache.hadoop.hbase.io.ImmutableBytesWritable],
       classOf[org.apache.hadoop.hbase.client.Result])
     hBaseRDD.cache()
-      val resultOnlyRdd = hBaseRDD.map(e => e._2)
+      val resultOnlyRdd : RDD[Result] = hBaseRDD.map(e => e._2)
 
     //val repartitionedRdd = hBaseRDD.cache().repartition(_partitionCount)
     resultOnlyRdd.map(e => {
