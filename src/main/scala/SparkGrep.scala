@@ -2,6 +2,7 @@ package isr.project
 
 import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.SparkContext
+import org.apache.log4j.{Level, Logger}
 object SparkGrep {
 	def main(args: Array[String]) {
 
@@ -9,6 +10,9 @@ object SparkGrep {
 			System.err.println("Usage: SparkGrep <collection number to process> <number of classes>")
 			System.exit(1)
 		}
+		Logger.getLogger("org").setLevel(Level.OFF)
+    Logger.getLogger("akka").setLevel(Level.OFF)
+
 		val start = System.currentTimeMillis()
 		//Word2VecClassifier.run(args, '|')
 		val sc = new SparkContext()
