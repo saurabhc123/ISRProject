@@ -21,13 +21,34 @@ object DataRetriever {
     val hbaseConf = HBaseConfiguration.create()
     val table = new HTable(hbaseConf,_tableName)
     scan.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
-    val scanner = table.getScanner(scan)
-    table.setScannerCaching(5000)
-    println(s"Caching Info:${table.getScannerCaching}")
-    scanner.close()
-    //val interactor = new HBaseInteraction(_tableName)
+    scan.setCaching(5000)
+    scan.setBatch(1)
+    val resultScanner = table.getScanner(scan)
+    println(s"Caching Info:${scan.getCaching} Batch Info: ${scan.getBatch}")
     println("Scanning results now.")
+    var continueLoop = true
+    while (continueLoop) {
+      try {
+        val results = resultScanner.next()
+        if (results == null)
+          continueLoop = false
+        println(results)
+      }
+      catch {
+        case e: Exception =>
+          e.printStackTrace()
+          continueLoop = false
+      }
+
+    }
+
+
+    resultScanner.close()
+    //val interactor = new HBaseInteraction(_tableName)
     return null
+
+
+
     /*val scanner = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
     val cols = Map(
       _colFam -> Set(_col)
