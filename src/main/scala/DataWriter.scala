@@ -25,6 +25,26 @@ object DataWriter {
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
  }
+
+  def writeTrainingData(tweets: RDD[Tweet]): Unit = {
+    val _tableName: String = "cs5604-f16-cla-training"
+    val _textColFam: String = "training-tweet"
+    val _labelCol: String = "label"
+    val _textCol : String = "text"
+    tweets.foreachPartitionAsync(
+      tweetRDD => {
+        val hbaseConf = HBaseConfiguration.create()
+        val table = new HTable(hbaseConf,_tableName)
+        tweetRDD.map(tweet => {
+          val put = new Put(Bytes.toBytes(tweet.id))
+          put.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_labelCol), Bytes.toBytes(tweet.label.get))
+          put.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_textCol), Bytes.toBytes(tweet.tweetText))
+          put
+        }).foreach(table.put)
+      }
+    )
+
+  }
   def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Put ={
     putValueAt(colFam,col,tweet.id,labelMapper(tweet.label.getOrElse(9999999.0)), table)
   }
