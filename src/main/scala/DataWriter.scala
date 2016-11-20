@@ -37,7 +37,7 @@ object DataWriter {
         val table = new HTable(hbaseConf,_tableName)
         tweetRDD.map(tweet => {
           val put = new Put(Bytes.toBytes(tweet.id))
-          put.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_labelCol), Bytes.toBytes(tweet.label.get))
+          put.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_labelCol), Bytes.toBytes(tweet.label.get.toString))
           put.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_textCol), Bytes.toBytes(tweet.tweetText))
           put
         }).foreach(table.put)
