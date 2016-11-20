@@ -31,7 +31,7 @@ object DataWriter {
     val _textColFam: String = "training-tweet"
     val _labelCol: String = "label"
     val _textCol : String = "text"
-    tweets.foreachPartitionAsync(
+    tweets.foreachPartition(
       tweetRDD => {
         val hbaseConf = HBaseConfiguration.create()
         val table = new HTable(hbaseConf,_tableName)
@@ -42,7 +42,7 @@ object DataWriter {
           put
         }).foreach(table.put)
       }
-    ).get()
+    )
 
   }
   def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Put ={
