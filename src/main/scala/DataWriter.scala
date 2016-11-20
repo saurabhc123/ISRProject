@@ -42,7 +42,7 @@ object DataWriter {
           put
         }).foreach(table.put)
       }
-    )
+    ).get()
 
   }
   def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Put ={
