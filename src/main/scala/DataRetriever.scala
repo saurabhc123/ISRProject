@@ -37,7 +37,7 @@ object DataRetriever {
     Tweet(key,words)
   }
 
-  def retrieveTrainingTweetsFromFile(fileName:String, sc : SparkContext) = RDD[Tweet] = {
+  def retrieveTrainingTweetsFromFile(fileName:String, sc : SparkContext) : RDD[Tweet] = {
     val lines = sc.textFile(fileName)
     lines.map(line=> Tweet(line.split('|')(1), line.split('|')(3), Option(line.split('|')(2).toDouble))).filter(tweet => tweet.label.isDefined)
   }
