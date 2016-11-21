@@ -1,5 +1,6 @@
 package isr.project
 
+import org.apache.log4j.{Level, Logger}
 import org.apache.spark.{SparkConf, SparkContext}
 object SparkGrep {
 	def main(args: Array[String]) {
@@ -9,6 +10,8 @@ object SparkGrep {
 			System.exit(1)
 		}
 		val start = System.currentTimeMillis()
+    Logger.getLogger("org").setLevel(Level.OFF)
+    Logger.getLogger("akka").setLevel(Level.OFF)
 		//Word2VecClassifier.run(args, '|')
 		val conf = new SparkConf()
 		conf.set("defaultMinPartitions", "10")
