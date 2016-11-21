@@ -19,7 +19,7 @@ object SparkGrep {
 
 		println(s"Default Partition Count:${sc.defaultMinPartitions}")
 		val data = DataRetriever.retrieveTweets(args(0),sc)
-		data.count()
+    println(s"Total Row Count: ${data.count()}")
 		//val cleaned = CleanTweet.clean(data,sc)
 		//val predicted = Word2VecClassifier.predict(cleaned,sc)
 		//DataWriter.writeTweets(predicted)
