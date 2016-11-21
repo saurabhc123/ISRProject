@@ -1,6 +1,5 @@
 package isr.project
 
-import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.{SparkConf, SparkContext}
 object SparkGrep {
 	def main(args: Array[String]) {
@@ -17,9 +16,10 @@ object SparkGrep {
 
 		println(s"Default Partition Count:${sc.defaultMinPartitions}")
 		val data = DataRetriever.retrieveTweets(args(0),sc)
-		val cleaned = CleanTweet.clean(data,sc)
-		val predicted = Word2VecClassifier.predict(cleaned,sc)
-		DataWriter.writeTweets(predicted)
+		data.count()
+		//val cleaned = CleanTweet.clean(data,sc)
+		//val predicted = Word2VecClassifier.predict(cleaned,sc)
+		//DataWriter.writeTweets(predicted)
 		//MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)
