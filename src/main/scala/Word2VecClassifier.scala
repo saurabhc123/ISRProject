@@ -4,6 +4,7 @@ package org.apache.spark.mllib.linalg
 
 import java.io.IOException
 
+import isr.project.Tweet
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
@@ -11,17 +12,17 @@ import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-import isr.project.Tweet
+
 import scala.util.Try
 
 //case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
 
-  
+
+  val _lrModelFilename = "data/lrclassifier.model"
   var _numberOfClasses = 2
   var _word2VecModelFilename = "data/word2vec.model"
-  val _lrModelFilename = "data/lrclassifier.model"
 
 def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     //val sc = new SparkContext()
@@ -105,8 +106,8 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
       println("--------------------------")
     }
 
-    //val conf = new SparkConf(false)/*.setMaster(args(0))*/.setAppName("Word2Vec")
-    val sc = new SparkContext(/*conf*/)
+    val conf = new SparkConf(false).setMaster(args(0)).setAppName("Word2Vec")
+    val sc = new SparkContext(conf)
 
     //Broadcast the variables
     val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
@@ -249,7 +250,7 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
       case ioe: IOException =>
           println(s"Classifier Model not found at ${bcLRClassifierModelFilename}. Creating model.")
           logisticRegressionModel =  GenerateOptimizedModel(trainingData, bcNumberOfClasses)
-          logisticRegressionModel.save(sc, bcLRClassifierModelFilename);
+        //logisticRegressionModel.save(sc, bcLRClassifierModelFilename);
           println(s"Saved classifier  model as ${bcLRClassifierModelFilename} .")
     }
 
