@@ -1,7 +1,7 @@
 package isr.project
 
 import org.apache.spark.mllib.linalg.Word2VecClassifier
-import org.apache.spark.SparkContext
+
 object SparkGrep {
 	def main(args: Array[String]) {
 
@@ -10,12 +10,12 @@ object SparkGrep {
 			System.exit(1)
 		}
 		val start = System.currentTimeMillis()
-		//Word2VecClassifier.run(args, '|')
-		val sc = new SparkContext()
-    val readTweets = DataRetriever.retrieveTweets(args(0),sc)
-    val cleanTweets = CleanTweet.clean(readTweets,sc)
-    val predictedTweets = Word2VecClassifier.predict(cleanTweets,sc)
-		DataWriter.writeTweets(predictedTweets)
+		Word2VecClassifier.run(args, '|')
+		//val sc = new SparkContext()
+		//val readTweets = DataRetriever.retrieveTweets(args(0),sc)
+		//val cleanTweets = CleanTweet.clean(readTweets,sc)
+		//val predictedTweets = Word2VecClassifier.predict(cleanTweets,sc)
+		//DataWriter.writeTweets(predictedTweets)
 		//MultiClassOrchestrator.train(args, '|')
     //Orchestrator.train(args)
 		//FpGenerate.generateFrequentPatterns("data/issac.txt", args)

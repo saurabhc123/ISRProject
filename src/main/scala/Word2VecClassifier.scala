@@ -21,7 +21,8 @@ object Word2VecClassifier{
 
 
   val _lrModelFilename = "data/lrclassifier.model"
-  var _numberOfClasses = 2
+  val _threshold = 0.0001
+  var _numberOfClasses = 9
   var _word2VecModelFilename = "data/word2vec.model"
 
 def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
@@ -256,12 +257,25 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
 
 
     val start = System.currentTimeMillis()
-    val logisticRegressionPredictions = testData.map { case LabeledPoint(label, features) =>
-      val prediction = logisticRegressionModel.predict(features)
-      (prediction, label)
-    }
+      /*val logisticRegressionPredictions = testData.map { case LabeledPoint(label, features) =>
+        val prediction = logisticRegressionModel.predict(features)
+        (prediction, label)
+      }*/
 
-      (logisticRegressionPredictions, start)
+      val logisticRegressionPredictions = testData
+        .map { case LabeledPoint(label, features) =>
+          val (prediction, probabilities) = ClassificationUtility
+            .predictPoint(features, logisticRegressionModel)
+          (prediction, label, probabilities)
+        }
+
+
+
+
+      val highProbabilityMisclassifications = logisticRegressionPredictions.filter(pred => pred._3.max > _threshold && pred._1 != pred._2)
+      val lowProbabilityClassifications = logisticRegressionPredictions.filter(pred => pred._3.max < _threshold && pred._1 == pred._2)
+
+      (logisticRegressionPredictions.map(pred => (if (pred._3.max > _threshold) pred._1 else -1.0, pred._2)), start)
     }
 
   def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
