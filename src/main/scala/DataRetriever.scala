@@ -47,8 +47,8 @@ object DataRetriever {
           val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc)
           println("*********** Persisting the tweets now. *****************")
           DataWriter.writeTweets(predictedTweets)
-          totalRecordCount = predictedTweets.count().toInt + 1
-          println(s"Predicted Tweets:${totalRecordCount}")
+          //totalRecordCount = predictedTweets.count().toInt + 1
+          //println(s"Predicted Tweets:${totalRecordCount}")
         }
       }
       catch {
