@@ -4,6 +4,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{HTable, Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.SparkContext
+import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.rdd.RDD
 /**
   * Created by Eric on 11/8/2016.
@@ -30,15 +31,24 @@ object DataRetriever {
     var totalRecordCount = 0
     while (continueLoop) {
       try {
-        println("Getting next bath of results now.")
-        val results = resultScanner.next()
-        //var resultTweets = rowToTweetConverter(resultScanner.)
+        println("Getting next batch of results now.")
+        val results = resultScanner.next(_cachedRecordCount)
+        //var resultTweets = rowToTweetConverter(resultScanner.next(_cachedRecordCount))
+
 
         if (results == null)
           continueLoop = false
         else {
-          totalRecordCount = totalRecordCount + 1
-          println(results)
+          val resultTweets = resultScanner.next(_cachedRecordCount).map(r => rowToTweetConverter(r))
+          val rddT = sc.parallelize(resultTweets)
+          println("*********** Cleaning the tweets now. *****************")
+          val cleanTweets = CleanTweet.clean(rddT, sc)
+          println("*********** Predicting the tweets now. *****************")
+          val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc)
+          println("*********** Persisting the tweets now. *****************")
+          DataWriter.writeTweets(predictedTweets)
+          totalRecordCount = predictedTweets.count().toInt + 1
+          println(s"Predicted Tweets:${totalRecordCount}")
         }
       }
       catch {
