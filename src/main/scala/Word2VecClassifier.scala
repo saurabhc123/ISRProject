@@ -4,24 +4,25 @@ package org.apache.spark.mllib.linalg
 
 import java.io.IOException
 
+import isr.project.Tweet
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
 import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
-import isr.project.Tweet
+
 import scala.util.Try
 
 //case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 
 object Word2VecClassifier{
 
-  
+
+  val _lrModelFilename = "data/lrclassifier.model"
   var _numberOfClasses = 2
   var _word2VecModelFilename = "data/word2vec.model"
-  val _lrModelFilename = "data/lrclassifier.model"
 
 def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     //val sc = new SparkContext()
@@ -161,14 +162,15 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     reviewWordsPairs.cache()
 
     try {
-      word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+      word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
+      //word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
       println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
     }
     catch{
       case ioe: IOException =>
           println(s"Model not found at ${bcWord2VecModelFilename.value}. Creating model.")
           word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
-          word2vecModel.save(sc, bcWord2VecModelFilename.value);
+        //word2vecModel.save(sc, bcWord2VecModelFilename.value);
           println(s"Saved model as ${bcWord2VecModelFilename.value} .")
     }
 
