@@ -4,6 +4,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{HTable, Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.SparkContext
+import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.rdd.RDD
 /**
@@ -15,6 +16,8 @@ object DataRetriever {
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
+  var _word2VecModelFilename = "data/word2vec.model"
+
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
     //implicit val config = HBaseConfig()
@@ -27,6 +30,10 @@ object DataRetriever {
     val resultScanner = table.getScanner(scan)
     println(s"Caching Info:${scan.getCaching} Batch Info: ${scan.getBatch}")
     println("Scanning results now.")
+
+    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+
     var continueLoop = true
     var totalRecordCount = 0
     while (continueLoop) {
@@ -34,7 +41,6 @@ object DataRetriever {
         println("Getting next batch of results now.")
         val results = resultScanner.next(_cachedRecordCount)
         //var resultTweets = rowToTweetConverter(resultScanner.next(_cachedRecordCount))
-
 
         if (results == null)
           continueLoop = false
@@ -44,7 +50,7 @@ object DataRetriever {
           println("*********** Cleaning the tweets now. *****************")
           val cleanTweets = CleanTweet.clean(rddT, sc)
           println("*********** Predicting the tweets now. *****************")
-          val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc)
+          val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel)
           println("*********** Persisting the tweets now. *****************")
           val actualTweets = predictedTweets.collect()
           actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))

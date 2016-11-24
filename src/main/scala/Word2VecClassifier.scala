@@ -24,7 +24,7 @@ object Word2VecClassifier{
   var _numberOfClasses = 2
   var _word2VecModelFilename = "data/word2vec.model"
 
-def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
+  def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel): RDD[Tweet] = {
     //val sc = new SparkContext()
 
     //Broadcast the variables
@@ -37,7 +37,7 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
 
     val cleanTestTweets = tweets map cleanTweetHtml
-    val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+    val word2vecModel = w2vModel //Word2VecModel.load(sc, bcWord2VecModelFilename.value)
     println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
     println("Finished Training")
     println(word2vecModel.transform("hurricane"))
