@@ -66,7 +66,7 @@ object DataRetriever {
           puts.collect()
           val recordCount = puts.count()
           println("Wrote to database " + recordCount + " tweets")
-          //predictedTweets.collect()
+          predictedTweets.collect()
           //val actualTweets = predictedTweets.take(1)
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
           //totalRecordCount = predictedTweets.count().toInt + 1
