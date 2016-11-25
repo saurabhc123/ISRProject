@@ -9,6 +9,9 @@ import org.apache.spark.rdd.RDD
 object DataWriter {
 
   def writeTweets(tweets: RDD[Tweet]): Unit ={
+    tweets.repartition(120)
+    tweets.cache()
+
     val _tableName: String = "cla-test-table"/*"ideal-cs5604f16"*/
     val _colFam : String = "cla-col-fam"/*"clean-tweet"*/
     val _col : String = "classification"/*"real-world-events"*/
