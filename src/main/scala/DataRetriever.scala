@@ -53,6 +53,8 @@ object DataRetriever {
         else {
           val resultTweets = resultScanner.next(_cachedRecordCount).map(r => rowToTweetConverter(r))
           val rddT = sc.parallelize(resultTweets)
+          rddT.cache()
+          rddT.repartition(12)
           println("*********** Cleaning the tweets now. *****************")
           val cleanTweets = CleanTweet.clean(rddT, sc)
           println("*********** Predicting the tweets now. *****************")

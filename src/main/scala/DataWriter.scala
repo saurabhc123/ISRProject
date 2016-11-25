@@ -10,7 +10,7 @@ object DataWriter {
 
   def writeTweets(tweets: RDD[Tweet]): Unit ={
 
-    tweets.repartition(120)
+    tweets.repartition(12)
     tweets.cache()
 
     val _tableName: String = "cla-test-table"/*"ideal-cs5604f16"*/
