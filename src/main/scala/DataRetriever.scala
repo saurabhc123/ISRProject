@@ -26,7 +26,7 @@ object DataRetriever {
     val table = new HTable(hbaseConf,_tableName)
     scan.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
     scan.setCaching(_cachedRecordCount)
-    scan.setBatch(1)
+    scan.setBatch(100)
 
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
