@@ -58,9 +58,9 @@ object DataRetriever {
           println("*********** Predicting the tweets now. *****************")
           val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel)
           println("*********** Persisting the tweets now. *****************")
-          val actualTweets = predictedTweets.collect()
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
           DataWriter.writeTweets(predictedTweets)
+          val actualTweets = predictedTweets.collect()
           //totalRecordCount = predictedTweets.count().toInt + 1
           //println(s"Predicted Tweets:${totalRecordCount}")
         }
