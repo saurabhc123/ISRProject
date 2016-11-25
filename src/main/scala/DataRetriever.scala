@@ -48,9 +48,10 @@ object DataRetriever {
         val results = resultScanner.next(_cachedRecordCount)
         //var resultTweets = rowToTweetConverter(resultScanner.next(_cachedRecordCount))
 
-        if (results == null)
+        if (results == null || results.length == 0)
           continueLoop = false
         else {
+          println(s"Result Length:${results.length}")
           val resultTweets = resultScanner.next(_cachedRecordCount).map(r => rowToTweetConverter(r))
           val rddT = sc.parallelize(resultTweets)
           rddT.cache()

@@ -39,8 +39,8 @@ object Word2VecClassifier{
     val cleanTestTweets = tweets map cleanTweetHtml
     val word2vecModel = w2vModel //Word2VecModel.load(sc, bcWord2VecModelFilename.value)
     println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
-    println("Finished Training")
-    println(word2vecModel.transform("hurricane"))
+    //println("Finished Training")
+    //println(word2vecModel.transform("hurricane"))
 
     // Words only
     def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduceOption((x, y) => s"$x $y")
