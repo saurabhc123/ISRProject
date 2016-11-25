@@ -62,8 +62,8 @@ object DataRetriever {
           println("*********** Persisting the tweets now. *****************")
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
           DataWriter.writeTweets(predictedTweets)
-          val actualTweets = predictedTweets.take(1)
-          actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
+          //val actualTweets = predictedTweets.take(1)
+          //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
           //totalRecordCount = predictedTweets.count().toInt + 1
           //println(s"Tweet Text:${actualTweets} Label:${actualTweets.label}"))
         }
