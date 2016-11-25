@@ -33,6 +33,11 @@ object DataRetriever {
 
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+    //Perform a cold start of the model pipeline so that this loading
+    //doesn't disrupt the read later.
+    val coldTweet = sc.parallelize(Array[Tweet]{ Tweet("id", "Some tweet")})
+    val predictedTweets = Word2VecClassifier.predict(coldTweet, sc, word2vecModel)
+    predictedTweets.collect
 
     var continueLoop = true
     var totalRecordCount = 0
