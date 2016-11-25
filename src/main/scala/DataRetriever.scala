@@ -27,9 +27,6 @@ object DataRetriever {
     scan.addColumn(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
     scan.setCaching(_cachedRecordCount)
     scan.setBatch(1)
-    val resultScanner = table.getScanner(scan)
-    println(s"Caching Info:${scan.getCaching} Batch Info: ${scan.getBatch}")
-    println("Scanning results now.")
 
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
@@ -37,7 +34,11 @@ object DataRetriever {
     //doesn't disrupt the read later.
     val coldTweet = sc.parallelize(Array[Tweet]{ Tweet("id", "Some tweet")})
     val predictedTweets = Word2VecClassifier.predict(coldTweet, sc, word2vecModel)
-    predictedTweets.collect
+    predictedTweets.count
+
+    val resultScanner = table.getScanner(scan)
+    println(s"Caching Info:${scan.getCaching} Batch Info: ${scan.getBatch}")
+    println("Scanning results now.")
 
     var continueLoop = true
     var totalRecordCount = 0
