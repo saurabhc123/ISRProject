@@ -27,10 +27,12 @@ object DataWriter {
       tweet.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table)).foreach(x => table.put(x))
     })*/
 
-    val hbaseConf = HBaseConfiguration.create()
-    val table = new HTable(hbaseConf, _tableName)
 
-    val writeTweets = tweetRDD.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table))
+    val writeTweets = tweetRDD.map(tweet => {
+      val hbaseConf = HBaseConfiguration.create()
+      val table = new HTable(hbaseConf, _tableName)
+      writeTweetToDatabase(tweet, _colFam, _col, table)
+    })
 
     val recordCount = writeTweets.count()
     println("Wrote to database " + recordCount + " tweets")
