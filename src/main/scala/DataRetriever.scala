@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
   */
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
-  val _cachedRecordCount = 1200
+  val _cachedRecordCount = 50000
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
