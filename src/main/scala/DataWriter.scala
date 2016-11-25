@@ -31,7 +31,9 @@ object DataWriter {
     val writeTweets = tweetRDD.map(tweet => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf, _tableName)
-      writeTweetToDatabase(tweet, _colFam, _col, table)
+      val putAction = writeTweetToDatabase(tweet, _colFam, _col, table)
+      table.put(putAction)
+      putAction
     })
 
     val recordCount = writeTweets.count()
@@ -47,9 +49,9 @@ object DataWriter {
     //println("Wrote to database " + tweets.count() + " tweets")
  }
 
-  def writeTweetToDatabase(tweet: Tweet, colFam: String, col: String, table: HTable): Unit = {
+  def writeTweetToDatabase(tweet: Tweet, colFam: String, col: String, table: HTable): Put = {
     val putAction = putValueAt(colFam, col, tweet.id, labelMapper(tweet.label.getOrElse(9999999.0)), table)
-    table.put(putAction)
+    putAction
   }
 
   def putValueAt(columnFamily: String, column: String, rowKey: String, value: String, table: HTable) : Put = {
