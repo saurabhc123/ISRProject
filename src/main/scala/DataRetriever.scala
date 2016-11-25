@@ -62,11 +62,16 @@ object DataRetriever {
           val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel)
           println("*********** Persisting the tweets now. *****************")
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
+          predictedTweets.collect()
+          val firstTweet = predictedTweets.take(1)
+          firstTweet.map(actualTweets =>
+            println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
+          val i = firstTweet.length
           val puts = DataWriter.writeTweets(predictedTweets)
           puts.collect()
           val recordCount = puts.count()
           println("Wrote to database " + recordCount + " tweets")
-          predictedTweets.collect()
+
           //val actualTweets = predictedTweets.take(1)
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
           //totalRecordCount = predictedTweets.count().toInt + 1
