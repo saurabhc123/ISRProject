@@ -8,7 +8,7 @@ import org.apache.spark.rdd.RDD
   */
 object DataWriter {
 
-  def writeTweets(tweetRDD: RDD[Tweet]): Unit = {
+  def writeTweets(tweetRDD: RDD[Tweet]): RDD[Put] = {
 
     //tweets.repartition(12)
     //tweets.cache()
@@ -36,8 +36,8 @@ object DataWriter {
       putAction
     })
 
-    val recordCount = writeTweets.count()
-    println("Wrote to database " + recordCount + " tweets")
+
+    writeTweets
     /*tweetRDD.map(tweet => {
       val hbaseConf = HBaseConfiguration.create()
 
