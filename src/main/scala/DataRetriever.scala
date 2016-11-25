@@ -63,6 +63,7 @@ object DataRetriever {
           println("*********** Persisting the tweets now. *****************")
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
           val puts = DataWriter.writeTweets(predictedTweets)
+          puts.collect()
           val recordCount = puts.count()
           println("Wrote to database " + recordCount + " tweets")
           //predictedTweets.collect()
