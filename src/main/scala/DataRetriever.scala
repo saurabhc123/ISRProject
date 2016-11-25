@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
   */
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
-  val _cachedRecordCount = 1000
+  val _cachedRecordCount = 5000
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
@@ -59,8 +59,8 @@ object DataRetriever {
           val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel)
           println("*********** Persisting the tweets now. *****************")
           val actualTweets = predictedTweets.collect()
-          actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
-          //DataWriter.writeTweets(predictedTweets)
+          //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
+          DataWriter.writeTweets(predictedTweets)
           //totalRecordCount = predictedTweets.count().toInt + 1
           //println(s"Predicted Tweets:${totalRecordCount}")
         }
