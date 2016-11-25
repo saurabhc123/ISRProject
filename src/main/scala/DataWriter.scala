@@ -21,15 +21,22 @@ object DataWriter {
     //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
     //rdd.toHBase(_tableName, _colFam, headers)
 
-    tweetRDD.foreachPartition(tweet => {
+    /*tweetRDD.foreachPartition(tweet => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf, _tableName)
-      tweet.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table)).foreach(table.put)
-    })
+      tweet.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table)).foreach(x => table.put(x))
+    })*/
 
-    var recordCount = tweetRDD.count()
+    val hbaseConf = HBaseConfiguration.create()
+    val table = new HTable(hbaseConf, _tableName)
+
+    val writeTweets = tweetRDD.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table))
+
+    val recordCount = writeTweets.count()
+    println("Wrote to database " + recordCount + " tweets")
     /*tweetRDD.map(tweet => {
       val hbaseConf = HBaseConfiguration.create()
+
       val table = new HTable(hbaseConf,_tableName)
       writeTweetToDatabase(tweet, _colFam, _col, table)//.foreach(table.put)
     })*/
@@ -37,8 +44,10 @@ object DataWriter {
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
  }
-  def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Put ={
-    putValueAt(colFam,col,tweet.id,labelMapper(tweet.label.getOrElse(9999999.0)), table)
+
+  def writeTweetToDatabase(tweet: Tweet, colFam: String, col: String, table: HTable): Unit = {
+    val putAction = putValueAt(colFam, col, tweet.id, labelMapper(tweet.label.getOrElse(9999999.0)), table)
+    table.put(putAction)
   }
 
   def putValueAt(columnFamily: String, column: String, rowKey: String, value: String, table: HTable) : Put = {
