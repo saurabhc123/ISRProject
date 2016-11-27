@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
   */
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
-  val _cachedRecordCount = 50000
+  val _cachedRecordCount = 5000
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
@@ -71,6 +71,7 @@ object DataRetriever {
           //predictedTweets.collect().take(1).foreach(s => s"Tweet Text:${s.tweetText} Label:${s.label}")
           predictedTweets.cache()
           val repartitionedPredictions = predictedTweets.repartition(12)
+          println(s"The amount of tweets to be written is ${predictedTweets.count()}")
           DataWriter.writeTweets(repartitionedPredictions)
           //puts.collect()
           //val recordCount = puts.count()
