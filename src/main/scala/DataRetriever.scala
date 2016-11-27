@@ -65,7 +65,7 @@ object DataRetriever {
           println("*********** Cleaning the tweets now. *****************")
           val cleanTweets = CleanTweet.clean(rddT, sc)
           println("*********** Predicting the tweets now. *****************")
-          val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel)
+          val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel, logisticRegressionModel)
           println("*********** Persisting the tweets now. *****************")
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
 
