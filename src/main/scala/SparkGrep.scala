@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext
 object SparkGrep {
 	def main(args: Array[String]) {
 
-		if (args.length < 2) {
+		if (args.length < 3) {
 			System.err.println("Usage: SparkGrep <collection number to process> <number of classes> <blockCount>")
 			System.exit(1)
 		}
