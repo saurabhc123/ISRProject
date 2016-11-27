@@ -22,7 +22,7 @@ object DataWriter {
     //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
     //rdd.toHBase(_tableName, _colFam, headers)
     val interactor = new HBaseInteraction(_tableName)
-    tweetRDD.collect().foreach(tweet => interactor.putValueAt(_colFam, _col, tweet.id, labelMapper(tweet.label.getOrElse(9999999.0))))
+    tweetRDD.collect().foreach(tweet => interactor.putValueAt(_colFam, _col, '0' + tweet.id, labelMapper(tweet.label.getOrElse(9999999.0))))
 
 /*    tweetRDD.foreachPartition(tweet => {
       val hbaseConf = HBaseConfiguration.create()
