@@ -6,7 +6,7 @@ object SparkGrep {
 	def main(args: Array[String]) {
 
 		if (args.length < 2) {
-			System.err.println("Usage: SparkGrep <collection number to process> <number of classes>")
+			System.err.println("Usage: SparkGrep <collection number to process> <number of classes> <blockCount>")
 			System.exit(1)
 		}
 		Logger.getLogger("org").setLevel(Level.OFF)
@@ -15,7 +15,7 @@ object SparkGrep {
 		val start = System.currentTimeMillis()
 		//Word2VecClassifier.run(args, '|')
 		val sc = new SparkContext()
-    val readTweets = DataRetriever.retrieveTweets(args(0),sc)
+		val readTweets = DataRetriever.retrieveTweets(args, sc)
     //val cleanTweets = CleanTweet.clean(readTweets,sc)
     //val predictedTweets = Word2VecClassifier.predict(cleanTweets,sc)
 		//DataWriter.writeTweets(predictedTweets)

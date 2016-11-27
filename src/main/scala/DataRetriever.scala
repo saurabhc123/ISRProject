@@ -13,15 +13,19 @@ import org.apache.spark.rdd.RDD
   */
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
-  val _cachedRecordCount = 50
   val _lrModelFilename = "data/lrclassifier.model"
+  var _cachedRecordCount = 50
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
   var _word2VecModelFilename = "data/word2vec.model"
 
-  def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
+  def retrieveTweets(args: Array[String], sc: SparkContext): RDD[Tweet] = {
     //implicit val config = HBaseConfig()
+
+    val collectionID = args(0)
+    if (args.length >= 2)
+      _cachedRecordCount = args(2).toInt
     val scan = new Scan(Bytes.toBytes(collectionID), Bytes.toBytes(collectionID + '0'))
     val hbaseConf = HBaseConfiguration.create()
     val table = new HTable(hbaseConf,_tableName)
