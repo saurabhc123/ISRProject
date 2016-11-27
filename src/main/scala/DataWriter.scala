@@ -28,9 +28,9 @@ object DataWriter {
     })*/
 
 
-    val firstTweet = tweetRDD.take(1)
-    firstTweet.map(actualTweets =>
-      println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
+    //val firstTweet = tweetRDD.take(1)
+    //firstTweet.map(actualTweets =>
+      //println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
 
     val writeTweets = tweetRDD.map(tweet => {
       val hbaseConf = HBaseConfiguration.create()

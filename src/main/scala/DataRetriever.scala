@@ -65,10 +65,10 @@ object DataRetriever {
 
 
           val firstTweet = predictedTweets.take(1)
-          firstTweet.map(actualTweets =>
+          firstTweet.foreach(actualTweets =>
             println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
-          val i = firstTweet.length
-          predictedTweets.collect()
+          //val i = firstTweet.length
+          //predictedTweets.collect().take(1).foreach(s => s"Tweet Text:${s.tweetText} Label:${s.label}")
           val puts = DataWriter.writeTweets(predictedTweets)
           puts.collect()
           val recordCount = puts.count()
