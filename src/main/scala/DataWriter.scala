@@ -23,7 +23,7 @@ object DataWriter {
     //rdd.toHBase(_tableName, _colFam, headers)
     val interactor = new HBaseInteraction(_tableName)
     tweetRDD.collect().foreach(tweet => interactor.putValueAt(_colFam, _col, tweet.id, labelMapper(tweet.label.getOrElse(9999999.0))))
-
+    interactor.close()
 /*    tweetRDD.foreachPartition(tweet => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf, _tableName)

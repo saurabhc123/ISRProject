@@ -17,7 +17,9 @@ class HBaseInteraction(tableName: String) extends Serializable{
 	// https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/HTable.html
 	val connection = ConnectionFactory.createConnection()
 	val table = connection.getTable(TableName.valueOf(tn))
-	
+	def close(): Unit= {
+		table.close()
+	}
 	def putValueAt(columnFamily: String, column: String, rowKey: String, value: String) = {
 		// Make a new put object to handle adding data to the table
 		// https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html
