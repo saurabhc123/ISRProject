@@ -4,6 +4,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.{HTable, Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.spark.SparkContext
+import org.apache.spark.mllib.classification.LogisticRegressionModel
 import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.rdd.RDD
@@ -13,11 +14,11 @@ import org.apache.spark.rdd.RDD
 case class Tweet(id: String, tweetText: String, label: Option[Double] = None)
 object DataRetriever {
   val _cachedRecordCount = 2000
+  val _lrModelFilename = "data/lrclassifier.model"
   var _tableName: String = "ideal-cs5604f16" /*"ideal-cs5604f16-fake"*/
   var _colFam : String = "tweet"
   var _col : String = "cleantext" /*"text"*/
   var _word2VecModelFilename = "data/word2vec.model"
-
 
   def retrieveTweets(collectionID: String, sc : SparkContext): RDD[Tweet] = {
     //implicit val config = HBaseConfig()
@@ -29,12 +30,17 @@ object DataRetriever {
     scan.setBatch(100)
 
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
     val word2vecModel = Word2VecModel.load(sc, bcWord2VecModelFilename.value)
+    val logisticRegressionModel = LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
+    println(s"Classifier Model file found:$bcLRClassifierModelFilename. Loading model.")
     //Perform a cold start of the model pipeline so that this loading
     //doesn't disrupt the read later.
     val coldTweet = sc.parallelize(Array[Tweet]{ Tweet("id", "Some tweet")})
-    val predictedTweets = Word2VecClassifier.predict(coldTweet, sc, word2vecModel)
+    val predictedTweets = Word2VecClassifier.predict(coldTweet, sc, word2vecModel, logisticRegressionModel)
     predictedTweets.count
+
+
 
     val resultScanner = table.getScanner(scan)
     println(s"Caching Info:${scan.getCaching} Batch Info: ${scan.getBatch}")
