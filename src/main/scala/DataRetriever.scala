@@ -55,6 +55,7 @@ object DataRetriever {
     while (continueLoop) {
       try {
         println("Getting next batch of results now.")
+        val start = System.currentTimeMillis()
         val results = resultScanner.next(_cachedRecordCount)
         //var resultTweets = rowToTweetConverter(resultScanner.next(_cachedRecordCount))
 
@@ -83,6 +84,8 @@ object DataRetriever {
           val repartitionedPredictions = predictedTweets.repartition(12)
           println(s"The amount of tweets to be written is ${predictedTweets.count()}")
           DataWriter.writeTweets(repartitionedPredictions)
+          val end = System.currentTimeMillis()
+          println(s"Took ${(end-start)/1000.0} seconds for This Batch.")
           //puts.collect()
           //val recordCount = puts.count()
 //          println("Wrote to database " + recordCount + " tweets")
