@@ -22,17 +22,17 @@ object DataWriter {
     //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
     //rdd.toHBase(_tableName, _colFam, headers)
 
-    /*tweetRDD.foreachPartition(tweet => {
+    tweetRDD.foreachPartition(tweet => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf, _tableName)
       tweet.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table)).foreach(x => table.put(x))
-    })*/
+    })
 
 
     //val firstTweet = tweetRDD.take(1)
     //firstTweet.map(actualTweets =>
       //println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
-
+/*
     val writeTweets = tweetRDD.foreach(tweet => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf, _tableName)
@@ -40,7 +40,7 @@ object DataWriter {
       table.put(putAction)
       table.close()
     })
-
+*/
     /*tweetRDD.map(tweet => {
       val hbaseConf = HBaseConfiguration.create()
 
