@@ -8,7 +8,8 @@ import org.apache.spark.rdd.RDD
   */
 object DataWriter {
 
-  def writeTweets(tweetRDD: RDD[Tweet]): RDD[Put] = {
+
+  def writeTweets(tweetRDD: RDD[Tweet]): Unit = {
 
     //tweets.repartition(12)
     //tweets.cache()
@@ -32,16 +33,14 @@ object DataWriter {
     //firstTweet.map(actualTweets =>
       //println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
 
-    val writeTweets = tweetRDD.map(tweet => {
+    val writeTweets = tweetRDD.foreach(tweet => {
       val hbaseConf = HBaseConfiguration.create()
       val table = new HTable(hbaseConf, _tableName)
       val putAction = writeTweetToDatabase(tweet, _colFam, _col, table)
       table.put(putAction)
-      putAction
+      table.close()
     })
 
-
-    writeTweets
     /*tweetRDD.map(tweet => {
       val hbaseConf = HBaseConfiguration.create()
 

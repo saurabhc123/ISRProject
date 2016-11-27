@@ -52,7 +52,7 @@ object DataRetriever {
           continueLoop = false
         else {
           println(s"Result Length:${results.length}")
-          val resultTweets = resultScanner.next(_cachedRecordCount).map(r => rowToTweetConverter(r))
+          val resultTweets = results.map(r => rowToTweetConverter(r))
           val rddT = sc.parallelize(resultTweets)
           rddT.cache()
           rddT.repartition(12)
@@ -69,10 +69,12 @@ object DataRetriever {
             println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
           //val i = firstTweet.length
           //predictedTweets.collect().take(1).foreach(s => s"Tweet Text:${s.tweetText} Label:${s.label}")
-          val puts = DataWriter.writeTweets(predictedTweets)
-          puts.collect()
-          val recordCount = puts.count()
-          println("Wrote to database " + recordCount + " tweets")
+          predictedTweets.cache()
+          val repartitionedPredictions = predictedTweets.repartition(12)
+          DataWriter.writeTweets(repartitionedPredictions)
+          //puts.collect()
+          //val recordCount = puts.count()
+//          println("Wrote to database " + recordCount + " tweets")
 
           //val actualTweets = predictedTweets.take(1)
           //actualTweets.map(t => println(s"Tweet Text:${t.tweetText} Label:${t.label}"))
