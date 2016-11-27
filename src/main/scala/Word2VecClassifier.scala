@@ -24,7 +24,7 @@ object Word2VecClassifier{
   var _numberOfClasses = 2
   var _word2VecModelFilename = "data/word2vec.model"
 
-  def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel): RDD[Tweet] = {
+  def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): RDD[Tweet] = {
     //val sc = new SparkContext()
 
     //Broadcast the variables
@@ -66,7 +66,7 @@ object Word2VecClassifier{
 
 
 
-    val logisticRegressionModel =  LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
+    val logisticRegressionModel =  lrModel //LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
     println(s"Classifier Model file found:$bcLRClassifierModelFilename. Loading model.")
 
     val start = System.currentTimeMillis()
