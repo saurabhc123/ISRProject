@@ -28,9 +28,9 @@ object Word2VecClassifier{
     //val sc = new SparkContext()
 
     //Broadcast the variables
-    val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
-    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
-    val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
+    //val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
+    //val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    //val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
     def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
 
@@ -38,7 +38,7 @@ object Word2VecClassifier{
 
     val cleanTestTweets = tweets map cleanTweetHtml
     val word2vecModel = w2vModel //Word2VecModel.load(sc, bcWord2VecModelFilename.value)
-    println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
+    //println(s"Model file found:${bcWord2VecModelFilename.value}. Loading model.")
     //println("Finished Training")
     //println(word2vecModel.transform("hurricane"))
 
@@ -67,7 +67,7 @@ object Word2VecClassifier{
 
 
     val logisticRegressionModel =  lrModel //LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
-    println(s"Classifier Model file found:$bcLRClassifierModelFilename. Loading model.")
+    //println(s"Classifier Model file found:$bcLRClassifierModelFilename. Loading model.")
 
     val start = System.currentTimeMillis()
     val logisticRegressionPredictions = testSet.map { case (Tweet(id,tweetText,label), features) =>
