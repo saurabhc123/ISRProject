@@ -51,7 +51,7 @@ object DataRetriever {
     println("Scanning results now.")
 
     var continueLoop = true
-    var totalRecordCount = 0
+    var totalRecordCount: Long = 0
     while (continueLoop) {
       try {
         println("Getting next batch of results now.")
