@@ -14,7 +14,7 @@ object SparkGrep {
 		val sc = new SparkContext()
 		val trainingTweets = DataRetriever.getTrainingTweets(sc)
 			trainingTweets.collect().foreach(println)
-		println(trainingTweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().count().toInt)
+		println(trainingTweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().collect().sorted.foreach(println))
 		//val cleanTweet = CleanTweet.clean(trainingTweets,sc)
 		//DataWriter.writeTrainingData(cleanTweet)
     /*val readTweets = DataRetriever.retrieveTweets(args(0),sc)
