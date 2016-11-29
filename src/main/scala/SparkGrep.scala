@@ -3,6 +3,12 @@ package isr.project
 import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.SparkContext
 object SparkGrep {
+  def tweetchange(tweet:Tweet): Tweet= {
+    if (tweet.label.get == 0.0) {
+      return Tweet(tweet.id, tweet.tweetText, Option(9.0))
+    }
+    return Tweet(tweet.id, tweet.tweetText, tweet.label)
+  }
 	def main(args: Array[String]) {
 
 		if (args.length < 2) {
@@ -16,6 +22,7 @@ object SparkGrep {
 			trainingTweets.collect().foreach(println)
     Word2VecClassifier.train(trainingTweets,sc)
 		println(trainingTweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().collect().sorted.foreach(println))
+		trainingTweets.map(tweet => tweetchange(tweet)).collect().foreach(println)
 		//val cleanTweet = CleanTweet.clean(trainingTweets,sc)
 		//DataWriter.writeTrainingData(cleanTweet)
     /*val readTweets = DataRetriever.retrieveTweets(args(0),sc)
