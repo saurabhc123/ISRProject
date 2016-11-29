@@ -1,13 +1,15 @@
 package isr.project
 
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.{HTable, Result, Scan}
+import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
+import org.apache.hadoop.hbase.client.{ConnectionFactory, HTable, Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
+import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.LogisticRegressionModel
 import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.mllib.linalg.Word2VecClassifier
-import org.apache.spark.rdd.RDD
+
+import scala.collection.JavaConversions._
 /**
   * Created by Eric on 11/8/2016.
   */
@@ -134,6 +136,31 @@ object DataRetriever {
     val key = Bytes.toString(cell.getRowArray, cell.getRowOffset, cell.getRowLength)
     val words = Bytes.toString(cell.getValueArray, cell.getValueOffset, cell.getValueLength)
     Tweet(key,words)
+  }
+
+  def retrieveTrainingTweetsFromFile(fileName:String, sc : SparkContext) : RDD[Tweet] = {
+    val lines = sc.textFile(fileName)
+    lines.map(line=> Tweet(line.split('|')(1), line.split('|')(2), Option(line.split('|')(0).toDouble))).filter(tweet => tweet.label.isDefined)
+  }
+
+  def getTrainingTweets(sc:SparkContext): RDD[Tweet] = {
+    val _tableName: String = "cs5604-f16-cla-training"
+    val _textColFam: String = "training-tweet"
+    val _labelCol: String = "label"
+    val _textCol : String = "text"
+    val connection = ConnectionFactory.createConnection()
+    val table = connection.getTable(TableName.valueOf(_tableName))
+    val scanner = new Scan()
+    scanner.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_labelCol))
+    scanner.addColumn(Bytes.toBytes(_textColFam), Bytes.toBytes(_textCol))
+    sc.parallelize(table.getScanner(scanner).map(result => {
+      val labcell = result.getColumnLatestCell(Bytes.toBytes(_textColFam), Bytes.toBytes(_labelCol))
+      val textcell = result.getColumnLatestCell(Bytes.toBytes(_textColFam), Bytes.toBytes(_textCol))
+      val key = Bytes.toString(labcell.getRowArray, labcell.getRowOffset, labcell.getRowLength)
+      val words = Bytes.toString(textcell.getValueArray, textcell.getValueOffset, textcell.getValueLength)
+      val label = Bytes.toString(labcell.getValueArray, labcell.getValueOffset, labcell.getValueLength).toDouble
+      Tweet(key,words,Option(label))
+    }).toList)
   }
 
 }

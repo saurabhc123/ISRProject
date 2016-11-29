@@ -20,9 +20,67 @@ import scala.util.Try
 object Word2VecClassifier{
 
 
-  val _lrModelFilename = "data/lrclassifier.model"
   var _numberOfClasses = 2
-  var _word2VecModelFilename = "data/word2vec.model"
+  var _word2VecModelFilename = "data/word2vec.model_test2"
+  val _lrModelFilename = "data/lrclassifier.model_test2"
+
+
+
+  def train(tweets: RDD[Tweet], sc:SparkContext): Unit = {
+    val bcNumberOfClasses = sc.broadcast(tweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().count().toInt + 1)
+    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
+
+    def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
+
+    def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
+
+    val cleanTrainingTweets = tweets map cleanTweetHtml
+
+    // Words only
+    def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduceOption((x, y) => s"$x $y")
+
+    def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText).getOrElse(""))
+
+    val wordOnlyTrainSample = cleanTrainingTweets map wordOnlySample
+
+    // Word2Vec
+    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
+    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
+
+    val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
+    word2vecModel.save(sc, bcWord2VecModelFilename.value)
+
+
+    def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
+
+    def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
+
+    def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
+
+    // Create feature vectors
+    val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
+    //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
+    val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
+    val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
+    val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
+      case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
+    }
+    val trainingSet = featuresPairTrain.values
+
+    // Classification
+    println("String Learning and evaluating models")
+    //val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
+    //testSet.repartition(partitionCount)
+
+    //val trainingRDD = trainingSet.toJavaRDD()
+    //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
+    // Compute raw scores on the test set.
+
+    //import spark.implicits._
+    val logisticRegressionModel =  GenerateOptimizedModel(trainingSet, bcNumberOfClasses.value)
+    logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
+  }
 
   def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): RDD[Tweet] = {
     //val sc = new SparkContext()
