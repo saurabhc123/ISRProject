@@ -22,7 +22,7 @@ object SparkGrep {
 			trainingTweets.collect().foreach(println)
     Word2VecClassifier.train(trainingTweets,sc)
 		println(trainingTweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().collect().sorted.foreach(println))
-		trainingTweets.map(tweet => tweetchange(tweet)).collect().foreach(println)
+		DataWriter.writeTrainingData(trainingTweets.map(tweet => tweetchange(tweet)))
 		//val cleanTweet = CleanTweet.clean(trainingTweets,sc)
 		//DataWriter.writeTrainingData(cleanTweet)
     /*val readTweets = DataRetriever.retrieveTweets(args(0),sc)
