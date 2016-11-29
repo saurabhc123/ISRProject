@@ -21,13 +21,13 @@ object Word2VecClassifier{
 
 
   var _numberOfClasses = 2
-  var _word2VecModelFilename = "data/word2vec.model"
-  val _lrModelFilename = "data/lrclassifier.model"
+  var _word2VecModelFilename = "data/word2vec.model_test2"
+  val _lrModelFilename = "data/lrclassifier.model_test2"
 
 
 
   def train(tweets: RDD[Tweet], sc:SparkContext): Unit = {
-    val bcNumberOfClasses = sc.broadcast(tweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().count().toInt)
+    val bcNumberOfClasses = sc.broadcast(tweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().count().toInt + 1)
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
