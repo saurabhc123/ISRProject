@@ -81,14 +81,15 @@ object DataRetriever {
           //val i = firstTweet.length
           //predictedTweets.collect().take(1).foreach(s => s"Tweet Text:${s.tweetText} Label:${s.label}")
           predictedTweets.cache()
-          val repartitionedPredictions = predictedTweets.repartition(12)
           val batchTweetCount = predictedTweets.count()
+          val repartitionedPredictions = predictedTweets.repartition(12)
           println(s"The amount of tweets to be written is $batchTweetCount")
           DataWriter.writeTweets(repartitionedPredictions)
           val end = System.currentTimeMillis()
           totalRecordCount += batchTweetCount
           println(s"Took ${(end-start)/1000.0} seconds for This Batch.")
           println(s"This batch had $batchTweetCount tweets. We have processed $totalRecordCount tweets overall")
+          continueLoop = false
           //puts.collect()
           //val recordCount = puts.count()
 //          println("Wrote to database " + recordCount + " tweets")

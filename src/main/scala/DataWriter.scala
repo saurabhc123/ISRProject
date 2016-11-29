@@ -14,9 +14,9 @@ object DataWriter {
     //tweets.repartition(12)
     //tweets.cache()
 
-    val _tableName: String = "cla-test-table"/*"ideal-cs5604f16"*/
-    val _colFam : String = "cla-col-fam"/*"clean-tweet"*/
-    val _col : String = "classification"/*"real-world-events"*/
+    val _tableName: String = /*"cla-test-table"*/"ideal-cs5604f16"
+    val _colFam : String = /*"cla-col-fam"*/"clean-tweet"
+    val _col : String = /*"classification"*/"real-world-events"
     //implicit val config = HBaseConfig()
     //val headers = Seq(_col)
     //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
