@@ -8,24 +8,52 @@ import org.apache.spark.rdd.RDD
   */
 object DataWriter {
 
-  def writeTweets(tweets: RDD[Tweet]): Unit ={
-    val _tableName: String = "cla-test-table"/*"ideal-cs5604f16"*/
-    val _colFam : String = "cla-col-fam"/*"clean-tweet"*/
-    val _col : String = "classification"/*"real-world-events"*/
+
+  def writeTweets(tweetRDD: RDD[Tweet]): Unit = {
+
+    //tweets.repartition(12)
+    //tweets.cache()
+
+    val _tableName: String = /*"cla-test-table"*/"ideal-cs5604f16"
+    val _colFam : String = /*"cla-col-fam"*/"clean-tweet"
+    val _col : String = /*"classification"*/"real-world-events"
     //implicit val config = HBaseConfig()
     //val headers = Seq(_col)
     //val rdd: RDD[(String, Seq[String])] = tweets.map({tweet => tweet.id -> Seq(labelMapper(tweet.label.getOrElse(999999.0)))})
     //rdd.toHBase(_tableName, _colFam, headers)
-    tweets.foreachPartition(tweetRDD => {
+    val interactor = new HBaseInteraction(_tableName)
+    tweetRDD.collect().foreach(tweet => interactor.putValueAt(_colFam, _col, tweet.id, labelMapper(tweet.label.getOrElse(9999999.0))))
+    interactor.close()
+/*    tweetRDD.foreachPartition(tweet => {
       val hbaseConf = HBaseConfiguration.create()
-      val table = new HTable(hbaseConf,_tableName)
-      tweetRDD.map(tweet => writeTweetToDatabase(tweet,_colFam,_col,table)).foreach(table.put)
+      val table = new HTable(hbaseConf, _tableName)
+      tweet.map(tweet => writeTweetToDatabase(tweet, _colFam, _col, table)).foreach(x => table.put(x))
+    })*/
+
+
+    //val firstTweet = tweetRDD.take(1)
+    //firstTweet.map(actualTweets =>
+      //println(s"Tweet Text:${actualTweets.tweetText} Label:${actualTweets.label}"))
+/*
+    val writeTweets = tweetRDD.foreach(tweet => {
+      val hbaseConf = HBaseConfiguration.create()
+      val table = new HTable(hbaseConf, _tableName)
+      val putAction = writeTweetToDatabase(tweet, _colFam, _col, table)
+      table.put(putAction)
+      table.close()
     })
+*/
+    /*tweetRDD.map(tweet => {
+      val hbaseConf = HBaseConfiguration.create()
+
+      val table = new HTable(hbaseConf,_tableName)
+      writeTweetToDatabase(tweet, _colFam, _col, table)//.foreach(table.put)
+    })*/
     //val interactor = new HBaseInteraction(_tableName)
     //tweets.collect.foreach(tweet => writeTweetToDatabase(tweet,interactor, _colFam, _col))
     //println("Wrote to database " + tweets.count() + " tweets")
- }
 
+ }
   def writeTrainingData(tweets: RDD[Tweet]): Unit = {
     val _tableName: String = "cs5604-f16-cla-training"
     val _textColFam: String = "training-tweet"
@@ -45,8 +73,10 @@ object DataWriter {
     )
 
   }
-  def writeTweetToDatabase(tweet : Tweet, colFam: String, col: String, table: HTable): Put ={
-    putValueAt(colFam,col,tweet.id,labelMapper(tweet.label.getOrElse(9999999.0)), table)
+
+  def writeTweetToDatabase(tweet: Tweet, colFam: String, col: String, table: HTable): Put = {
+    val putAction = putValueAt(colFam, col, tweet.id, labelMapper(tweet.label.getOrElse(9999999.0)), table)
+    putAction
   }
 
   def putValueAt(columnFamily: String, column: String, rowKey: String, value: String, table: HTable) : Put = {
