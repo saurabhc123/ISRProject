@@ -1,8 +1,8 @@
 package isr.project
-import org.apache.hadoop.hbase.client.{Result, Scan}
-import org.apache.hadoop.hbase.util.Bytes
-import org.apache.spark.rdd.RDD
+
+import org.apache.hadoop.hbase.client.Result
 import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 
 import scala.collection.JavaConversions._
 /**
@@ -31,10 +31,11 @@ object DataRetriever {
   }
 
   def rowToTweetConverter(result : Result): Tweet ={
-    val cell = result.getColumnLatestCell(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
+    /*val cell = result.getColumnLatestCell(Bytes.toBytes(_colFam), Bytes.toBytes(_col))
     val key = Bytes.toString(cell.getRowArray, cell.getRowOffset, cell.getRowLength)
     val words = Bytes.toString(cell.getValueArray, cell.getValueOffset, cell.getValueLength)
-    Tweet(key,words)
+    Tweet(key,words)*/
+    null
   }
 
 }

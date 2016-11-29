@@ -17,6 +17,7 @@ object ClassificationUtility {
     var maxMargin = 0.0
     val withBias = dataMatrix.size + 1 == dataWithBiasSize
     val classProbabilities: Array[Double] = new Array[Double](model.numClasses)
+    //classProbabilities{5} = -997778768.0
     (0 until model.numClasses - 1).foreach { i =>
       var margin = 0.0
       dataMatrix.foreachActive { (index, value) =>
@@ -32,6 +33,15 @@ object ClassificationUtility {
       }
       classProbabilities(i + 1) = 1.0 / (1.0 + Math.exp(-(margin - maxMargin)))
     }
+
+    val sumProbabilities = classProbabilities.sum
+    //Normalize probabilities
+    (0 until model.numClasses - 1).foreach { i =>
+
+      classProbabilities(i) = classProbabilities(i) / sumProbabilities
+    }
+
+
     return (bestClass.toDouble, classProbabilities)
   }
 }
