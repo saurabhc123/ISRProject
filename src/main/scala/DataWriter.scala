@@ -93,7 +93,7 @@ object DataWriter {
 
 
   def labelMapper(label:Double) : String= {
-    val map = Map(0.0 -> "NewYorkFirefighterShooting", 1.0->"ChinaFactoryExplosion", 2.0->"KentuckyAccidentalChildShooting",
+    val map = Map(9.0 -> "NewYorkFirefighterShooting", 1.0->"ChinaFactoryExplosion", 2.0->"KentuckyAccidentalChildShooting",
       3.0->"ManhattanBuildingExplosion", 4.0->"NewtownSchoolShooting", 5.0->"HurricaneSandy", 6.0->"HurricaneArthur",
       7.0->"HurricaneIsaac", 8.0->"TexasFertilizerExplosion", 10.0->"QuebecTrainDerailment", 11.0->"FairdaleTornado",
       12.0->"OklahomaTornado", 13.0->"MississippiTornado", 14->"AlabamaTornado")
