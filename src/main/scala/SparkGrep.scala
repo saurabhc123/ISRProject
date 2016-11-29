@@ -12,7 +12,7 @@ object SparkGrep {
 		val start = System.currentTimeMillis()
 		//Word2VecClassifier.run(args, '|')
 		val sc = new SparkContext()
-		val trainingTweets = DataRetriever.getTrainingTweets(sc).foreach(println)
+		val trainingTweets = DataRetriever.getTrainingTweets(sc).collect().foreach(println)
 		//val cleanTweet = CleanTweet.clean(trainingTweets,sc)
 		//DataWriter.writeTrainingData(cleanTweet)
     /*val readTweets = DataRetriever.retrieveTweets(args(0),sc)
