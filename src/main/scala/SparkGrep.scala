@@ -14,6 +14,7 @@ object SparkGrep {
 		val sc = new SparkContext()
 		val trainingTweets = DataRetriever.getTrainingTweets(sc)
 			trainingTweets.collect().foreach(println)
+    Word2VecClassifier.train(trainingTweets,sc)
 		println(trainingTweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().collect().sorted.foreach(println))
 		//val cleanTweet = CleanTweet.clean(trainingTweets,sc)
 		//DataWriter.writeTrainingData(cleanTweet)
