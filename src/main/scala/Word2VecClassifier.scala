@@ -21,7 +21,7 @@ object Word2VecClassifier{
 
 
   val _lrModelFilename = "data/lrclassifier.model"
-  val _threshold = 0.0001
+  val _threshold = 0.0
   var _numberOfClasses = 9
   var _word2VecModelFilename = "data/word2vec.model"
 
@@ -179,7 +179,11 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     println(word2vecModel.transform("hurricane"))
     //println(word2vecModel.findSynonyms("shooting", 4))
 
+    //def wordFeatures1(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w)).recoverWith(return List(new DenseVector(Array(0.0))))).map(x => x.get)
+    def wordFeatures1(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w)).getOrElse(new DenseVector(Array(0.0))))
+
     def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
+
 
     def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
@@ -187,6 +191,7 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
 
     // Create feature vectors
     val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
+    val wordFeaturePairTrain1 = reviewWordsPairs mapValues wordFeatures1
     //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
@@ -202,6 +207,9 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
 
 
     trainingSet.repartition(trainingPartitionCount)
+    println(s"Test tweets count before:${wordFeaturePairTrain.count()}")
+    println(s"Test tweets count before:${trainingSet.count()}")
+    println(s"Test tweets count after :${trainingSet.count()}")
 
 
 
@@ -213,6 +221,9 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
     val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
+
+
+
     val testSet = featuresPairTest.values
     testSet.cache()
     //testSet.repartition(partitionCount)
@@ -244,8 +255,9 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
       var logisticRegressionModel: LogisticRegressionModel = null
 
       try {
-      logisticRegressionModel =  LogisticRegressionModel.load(sc, bcLRClassifierModelFilename)
-      println(s"Classifier Model file found:${bcLRClassifierModelFilename}. Loading model.")
+        //logisticRegressionModel =  LogisticRegressionModel.load(sc, bcLRClassifierModelFilename)
+        logisticRegressionModel = GenerateOptimizedModel(trainingData, bcNumberOfClasses)
+        println(s"Classifier Model file found:${bcLRClassifierModelFilename}. Loading model.")
     }
     catch{
       case ioe: IOException =>
