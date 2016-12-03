@@ -225,7 +225,7 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
 
     //val (logisticRegressionPredictions, start) = NFoldBasedWord2VecClassifier.GeneratePredictions(trainingSet, testSet, sc)
     val (logisticRegressionPredictions, start) = GeneratePredictions(trainingSet, testSet, sc, bcNumberOfClasses.value, bcLRClassifierModelFilename.value)
-    val classZeroPredictionCount = logisticRegressionPredictions.filter(pred => pred._1 == 0.0).count()
+    val classZeroPredictionCount = logisticRegressionPredictions.filter(pred => pred._1 == 0.0)
     println(s"Zero class count =  ${classZeroPredictionCount}")
     GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression", bcNumberOfClasses.value)
 
@@ -270,11 +270,25 @@ def predict(tweets:RDD[Tweet], sc:SparkContext): RDD[Tweet] ={
           (prediction, label, probabilities, tweetText)
         }
 
+      val donaldTTweets = testData.filter(x => x._1.label == 0.0)
+      val donaldTPrediction = donaldTTweets
+        .map { case (LabeledPoint(label, features), tweetText) =>
+          val (prediction, probabilities) = ClassificationUtility
+            .predictPoint(features, logisticRegressionModel)
+          (prediction, label, probabilities, tweetText)
+        }
 
+      //ClassificationUtility.predictPoint(testData.filter(x => x._1.label == 0.0).first()._1, logisticRegressionModel)
+      val classZeroPredictionCount = logisticRegressionPredictions.filter(pred => pred._1 == 0.0)
 
 
       val highProbabilityMisclassifications = logisticRegressionPredictions.filter(pred => pred._3.max > _threshold && pred._1 != pred._2)
       val lowProbabilityClassifications = logisticRegressionPredictions.filter(pred => pred._3.max < _threshold && pred._1 == pred._2)
+      val probDistributions = logisticRegressionPredictions.map(pred => pred._3.max)
+      //logisticRegressionPredictions.collect()
+      probDistributions.repartition(1).saveAsTextFile("data/probDistribution.txt")
+
+
       //val eric = logisticRegressionPredictions.filter(p => p._3.max > 0.5)
       (logisticRegressionPredictions.map(pred => (if (pred._3.max == pred._3(pred._1.toInt) && pred._3(pred._1.toInt) > _threshold) pred._1 else 0.0, pred._2)), start)
     }
