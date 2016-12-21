@@ -71,7 +71,10 @@ object SparkGrep {
     val trainTweetsRDD = sc.parallelize(trainTweets,8)
     val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions)
     // start timer?
+    val start = System.currentTimeMillis()
     Word2VecClassifier.train(cleaned_trainingTweetsRDD,sc)
+    val end = System.currentTimeMillis()
+    println(s"Took ${(end - start) / 1000.0} seconds for the training.")
 
   }
 }
