@@ -80,6 +80,8 @@ object Word2VecClassifier{
     // Compute raw scores on the test set.
 
     //import spark.implicits._
+    println(bcLRClassifierModelFilename.value)
+    println(bcNumberOfClasses.value)
     val logisticRegressionModel = new LogisticRegressionWithLBFGS()
       .setNumClasses(bcNumberOfClasses.value)
       .run(trainingSet)
