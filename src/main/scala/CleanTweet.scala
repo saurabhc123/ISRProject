@@ -43,9 +43,9 @@ object CleanTweet {
     //val sc = new SparkContext(/*conf*/)
     //tweets.foreach(println)
     val tweetsRDD = tweets
-    val keys = tweetsRDD.map(tweet => tweet.id)
+    val keys = tweetsRDD.map(tweet => (tweet.id,tweet.label))
     val values = tweetsRDD.map(tweet => tweet.tweetText)
-    keys.zip(getCleanedTweets(values,sc)).map(va => Tweet(va._1.toString,va._2.toString))
+    keys.zip(getCleanedTweets(values,sc)).map(va => Tweet(va._1._1.toString,va._2.toString,va._1._2))
   }
   def createNLPPipeline(): StanfordCoreNLP = {
     val props = new Properties()

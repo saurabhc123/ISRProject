@@ -23,6 +23,7 @@ object Word2VecClassifier{
 
 
 
+
   val _lrModelFilename = "data/lrclassifier.model"
   val _threshold = 0.25
   var _numberOfClasses = 9
@@ -31,8 +32,9 @@ object Word2VecClassifier{
 
 
 
+
   def train(tweets: RDD[Tweet], sc:SparkContext): Unit = {
-    val bcNumberOfClasses = sc.broadcast(tweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().count().toInt + 1)
+    val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
@@ -51,7 +53,7 @@ object Word2VecClassifier{
 
     // Word2Vec
     val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
-    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
+    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable).cache()
 
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
     word2vecModel.save(sc, bcWord2VecModelFilename.value)
@@ -71,7 +73,7 @@ object Word2VecClassifier{
     val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
-    val trainingSet = featuresPairTrain.values
+    val trainingSet = featuresPairTrain.values.cache()
 
     // Classification
     println("String Learning and evaluating models")
@@ -83,7 +85,9 @@ object Word2VecClassifier{
     // Compute raw scores on the test set.
 
     //import spark.implicits._
-    val logisticRegressionModel =  GenerateOptimizedModel(trainingSet, bcNumberOfClasses.value)
+    val logisticRegressionModel = new LogisticRegressionWithLBFGS()
+      .setNumClasses(bcNumberOfClasses.value)
+      .run(trainingSet)
     logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
   }
 
