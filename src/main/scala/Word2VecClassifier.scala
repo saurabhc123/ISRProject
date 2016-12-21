@@ -46,7 +46,7 @@ object Word2VecClassifier{
 
     // Word2Vec
     val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
-    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
+    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable).cache()
 
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
     word2vecModel.save(sc, bcWord2VecModelFilename.value)
@@ -66,7 +66,7 @@ object Word2VecClassifier{
     val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
-    val trainingSet = featuresPairTrain.values
+    val trainingSet = featuresPairTrain.values.cache()
 
     // Classification
     println("String Learning and evaluating models")
