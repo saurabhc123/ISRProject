@@ -44,23 +44,23 @@ object SparkGrep {
     val end = System.currentTimeMillis()
     println(s"Took ${(end - start) / 1000.0} seconds for the whole process.")
   }
-  def getTweetsFromFile(fileName:String,labelMap:Map[String,Double], sc: SparkContext): Array[Tweet] = {
+  def getTweetsFromFile(fileName:String,labelMap:scala.collection.mutable.Map[String,Double], sc: SparkContext): Array[Tweet] = {
     val file = sc.textFile(fileName)
     val allProductNum = file.map(x => x.split("; ")).filter(!_.isEmpty).map(x => x(0)).distinct().collect()
     var maxLab = 0.0
     if (labelMap.nonEmpty ){
       maxLab = labelMap.valuesIterator.max + 1
     }
-    for (num <- allProductNum){
+    allProductNum.foreach(num => {
       if (!labelMap.contains(num)){
-        labelMap + (num -> maxLab)
+        labelMap += (num -> maxLab)
         maxLab = maxLab + 1
       }
-    }
+    })
     file.map(x => x.split("; ")).filter(!_.isEmpty).map(x => Tweet(x(1),x(2), labelMap.get(x(0)))).collect()
   }
   def HBaseExperiment(trainFile:String, testFile:String,sc: SparkContext): Unit ={
-    var labelMap = Map[String,Double]()
+    var labelMap = scala.collection.mutable.Map[String,Double]()
     val training_partitions = 8
     val testing_partitions = 8
     val trainTweets = getTweetsFromFile(trainFile,labelMap,sc)
