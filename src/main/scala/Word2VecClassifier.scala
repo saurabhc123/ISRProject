@@ -27,7 +27,7 @@ object Word2VecClassifier{
 
 
   def train(tweets: RDD[Tweet], sc:SparkContext): Unit = {
-    val bcNumberOfClasses = sc.broadcast(tweets.map(tweet => tweet.label).filter(_.isDefined).map(e => e.get).distinct().count().toInt + 1)
+    val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
 
@@ -49,8 +49,6 @@ object Word2VecClassifier{
     val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
 
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
-    println(bcWord2VecModelFilename.value)
-    reviewWordsPairs.values.foreach(println)
     word2vecModel.save(sc, bcWord2VecModelFilename.value)
 
 
@@ -80,12 +78,9 @@ object Word2VecClassifier{
     // Compute raw scores on the test set.
 
     //import spark.implicits._
-    println(bcLRClassifierModelFilename.value)
-    println(bcNumberOfClasses.value)
     val logisticRegressionModel = new LogisticRegressionWithLBFGS()
       .setNumClasses(bcNumberOfClasses.value)
       .run(trainingSet)
-    println(bcLRClassifierModelFilename.value)
     logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
   }
 
