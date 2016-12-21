@@ -14,10 +14,10 @@ object SparkGrep {
 
   def main(args: Array[String]) {
     if (args.length == 2){
-      val conf = new SparkConf()
-        .setMaster("local[*]")
-        .setAppName("HBaseProductExperiments")
-      val sc = new SparkContext(conf)
+      //val conf = new SparkConf()
+        //.setMaster("local[*]")
+        //.setAppName("HBaseProductExperiments")
+      val sc = new SparkContext(/*conf*/)
       HBaseExperiment(args(0),args(1),sc)
       System.exit(0)
     }
@@ -61,14 +61,14 @@ object SparkGrep {
   }
   def HBaseExperiment(trainFile:String, testFile:String,sc: SparkContext): Unit ={
     var labelMap = scala.collection.mutable.Map[String,Double]()
-    val training_partitions = 8
+    val training_partitions = 64 
     val testing_partitions = 8
     val trainTweets = getTweetsFromFile(trainFile,labelMap,sc)
     val testTweets = getTweetsFromFile(testFile,labelMap,sc)
     Word2VecClassifier._lrModelFilename = trainFile +"lrModel"
     Word2VecClassifier._word2VecModelFilename = trainFile +"w2vModel"
     Word2VecClassifier._numberOfClasses = trainTweets.map(x => x.label).distinct.length
-    val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
+    val trainTweetsRDD = sc.parallelize(trainTweets,8)
     val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions)
     // start timer?
     Word2VecClassifier.train(cleaned_trainingTweetsRDD,sc)
