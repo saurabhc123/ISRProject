@@ -1,8 +1,10 @@
 package isr.project
 
 import org.apache.spark.mllib.linalg.Word2VecClassifier
+
 import org.apache.spark.SparkContext
 import org.apache.log4j.{Level, Logger}
+
 object SparkGrep {
   def tweetchange(tweet: Tweet): Tweet = {
     if (tweet.label.get == 0.0) {
@@ -10,6 +12,7 @@ object SparkGrep {
     }
     return Tweet(tweet.id, tweet.tweetText, tweet.label)
   }
+
 
   def main(args: Array[String]) {
 
@@ -19,6 +22,7 @@ object SparkGrep {
     }
     Logger.getLogger("org").setLevel(Level.OFF)
     Logger.getLogger("akka").setLevel(Level.OFF)
+
 
     val start = System.currentTimeMillis()
     //Word2VecClassifier.run(args, '|')

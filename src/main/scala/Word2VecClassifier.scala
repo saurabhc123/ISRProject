@@ -12,6 +12,8 @@ import org.apache.spark.mllib.evaluation.MulticlassMetrics
 import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
+
 
 import scala.util.Try
 
@@ -20,9 +22,12 @@ import scala.util.Try
 object Word2VecClassifier{
 
 
-  var _numberOfClasses = 2
-  var _word2VecModelFilename = "data/word2vec.model_test2"
-  val _lrModelFilename = "data/lrclassifier.model_test2"
+
+  val _lrModelFilename = "data/lrclassifier.model"
+  val _threshold = 0.25
+  var _numberOfClasses = 9
+  var _word2VecModelFilename = "data/word2vec.model"
+
 
 
 
@@ -164,8 +169,8 @@ object Word2VecClassifier{
       println("--------------------------")
     }
 
-    //val conf = new SparkConf(false)/*.setMaster(args(0))*/.setAppName("Word2Vec")
-    val sc = new SparkContext(/*conf*/)
+    val conf = new SparkConf(false).setMaster(args(0)).setAppName("Word2Vec")
+    val sc = new SparkContext(conf)
 
     //Broadcast the variables
     val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
@@ -177,7 +182,7 @@ object Word2VecClassifier{
     val testPath = testFilename
 
     // Load text
-    def skipHeaders(idx: Int, iter: Iterator[String]) = if (idx == 0) iter.drop(1) else iter
+    def skipHeaders(idx: Int, iter: Iterator[String]) = if (idx == 0) iter else iter
 
     val trainFile = sc.textFile(trainPath, trainingPartitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
     val testFile = sc.textFile(testPath, partitionCount) mapPartitionsWithIndex skipHeaders map (l => l.split(delimiter))
@@ -269,7 +274,7 @@ object Word2VecClassifier{
     val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
     val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
-      case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
+      case (features, Tweet(id, tweetText, label)) => (LabeledPoint(label.get, features), tweetText)
     }
     val testSet = featuresPairTest.values
     testSet.cache()
@@ -283,7 +288,8 @@ object Word2VecClassifier{
 
     //val (logisticRegressionPredictions, start) = NFoldBasedWord2VecClassifier.GeneratePredictions(trainingSet, testSet, sc)
     val (logisticRegressionPredictions, start) = GeneratePredictions(trainingSet, testSet, sc, bcNumberOfClasses.value, bcLRClassifierModelFilename.value)
-
+    val classZeroPredictionCount = logisticRegressionPredictions.filter(pred => pred._1 == 0.0).count()
+    println(s"Zero class count =  ${classZeroPredictionCount}")
     GenerateClassifierMetrics(logisticRegressionPredictions, "Logistic Regression", bcNumberOfClasses.value)
 
     println("<---- done")
@@ -293,7 +299,7 @@ object Word2VecClassifier{
   }
 
   def GeneratePredictions(trainingData: RDD[LabeledPoint],
-                          testData: RDD[LabeledPoint],
+                          testData: RDD[(LabeledPoint, String)],
                           sc:SparkContext,
                           bcNumberOfClasses:Int,
                           bcLRClassifierModelFilename:String):
@@ -309,18 +315,31 @@ object Word2VecClassifier{
       case ioe: IOException =>
           println(s"Classifier Model not found at ${bcLRClassifierModelFilename}. Creating model.")
           logisticRegressionModel =  GenerateOptimizedModel(trainingData, bcNumberOfClasses)
-          logisticRegressionModel.save(sc, bcLRClassifierModelFilename);
+        //logisticRegressionModel.save(sc, bcLRClassifierModelFilename);
           println(s"Saved classifier  model as ${bcLRClassifierModelFilename} .")
     }
 
 
     val start = System.currentTimeMillis()
-    val logisticRegressionPredictions = testData.map { case LabeledPoint(label, features) =>
-      val prediction = logisticRegressionModel.predict(features)
-      (prediction, label)
-    }
+      /*val logisticRegressionPredictions = testData.map { case LabeledPoint(label, features) =>
+        val prediction = logisticRegressionModel.predict(features)
+        (prediction, label)
+      }*/
 
-      (logisticRegressionPredictions, start)
+      val logisticRegressionPredictions = testData
+        .map { case (LabeledPoint(label, features), tweetText) =>
+          val (prediction, probabilities) = ClassificationUtility
+            .predictPoint(features, logisticRegressionModel)
+          (prediction, label, probabilities, tweetText)
+        }
+
+
+
+
+      val highProbabilityMisclassifications = logisticRegressionPredictions.filter(pred => pred._3.max > _threshold && pred._1 != pred._2)
+      val lowProbabilityClassifications = logisticRegressionPredictions.filter(pred => pred._3.max < _threshold && pred._1 == pred._2)
+      //val eric = logisticRegressionPredictions.filter(p => p._3.max > 0.5)
+      (logisticRegressionPredictions.map(pred => (if (pred._3.max == pred._3(pred._1.toInt) && pred._3(pred._1.toInt) > _threshold) pred._1 else 0.0, pred._2)), start)
     }
 
   def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
@@ -349,7 +368,7 @@ object Word2VecClassifier{
     val metrics = new MulticlassMetrics(predictionAndLabels)
     //val uniqueLabels = predictionAndLabels.map(x => x._1).
 
-    for (i <- 0 to bcNumberOfClasses - 1) {
+    for (i <- 1 to bcNumberOfClasses - 1) {
     //for (i <- uniqueLabels) {
       val classLabel = i
       println(s"\n***********   Class:$classLabel   *************")
