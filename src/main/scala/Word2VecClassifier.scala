@@ -84,10 +84,7 @@ object Word2VecClassifier{
     //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
     // Compute raw scores on the test set.
 
-    //import spark.implicits._
-    val logisticRegressionModel = new LogisticRegressionWithLBFGS()
-      .setNumClasses(bcNumberOfClasses.value)
-      .run(trainingSet)
+    val logisticRegressionModel = GenerateOptimizedModel(trainingSet,bcNumberOfClasses.value)
     logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
   }
 
