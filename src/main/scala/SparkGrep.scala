@@ -1,9 +1,10 @@
 package isr.project
 
 import org.apache.spark.mllib.linalg.Word2VecClassifier
-
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.mllib.classification.LogisticRegressionModel
+import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.rdd.RDD
 
 object SparkGrep {
@@ -69,29 +70,51 @@ object SparkGrep {
     val testing_partitions = 8
     val trainTweets = getTweetsFromFile(trainFile,labelMap,sc)
     val testTweets = getTweetsFromFile(testFile,labelMap,sc)
-    Word2VecClassifier._lrModelFilename = trainFile +"lrModel"
-    Word2VecClassifier._word2VecModelFilename = trainFile +"w2vModel"
-    Word2VecClassifier._numberOfClasses = trainTweets.map(x => x.label).distinct.length
+
+    DataStatistics(trainTweets, testTweets)
+    SetupWord2VecField(trainFile, trainTweets)
+
     val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
     val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
-    // start timer?
-    val trainstart = System.currentTimeMillis()
-    val (word2VecModel, logisticRegressionModel) = Word2VecClassifier.train(cleaned_trainingTweetsRDD,sc)
-    val trainend = System.currentTimeMillis()
-    println(s"Took ${(trainend - trainstart) / 1000.0} seconds for the training.")
 
-
+    val (word2VecModel, logisticRegressionModel) = PerformTraining(sc, cleaned_trainingTweetsRDD)
 
     val testTweetsRDD = sc.parallelize(testTweets,testing_partitions)
-    val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions)
+    val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions).cache()
+
+    PerformPrediction(sc, word2VecModel, logisticRegressionModel, cleaned_testTweetsRDD)
+
+  }
+
+  private def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
     val teststart = System.currentTimeMillis()
-    val predictions = Word2VecClassifier.predict(cleaned_testTweetsRDD,sc,word2VecModel,logisticRegressionModel)
-    val metricBasedPrediction = cleaned_testTweetsRDD.map(x => x.label.get).zip(predictions.map(x => x.label.get)).map(x => (x._2,x._1))
-    Word2VecClassifier.GenerateClassifierMetrics(metricBasedPrediction,"LRW2VClassifier",Word2VecClassifier._numberOfClasses)
+    val predictions = Word2VecClassifier.predict(cleaned_testTweetsRDD, sc, word2VecModel, logisticRegressionModel)
+    val metricBasedPrediction = cleaned_testTweetsRDD.map(x => x.label.get).zip(predictions.map(x => x.label.get)).map(x => (x._2, x._1))
+    Word2VecClassifier.GenerateClassifierMetrics(metricBasedPrediction, "LRW2VClassifier", Word2VecClassifier._numberOfClasses)
     val testEnd = System.currentTimeMillis()
     println(s"Took ${(testEnd - teststart) / 1000.0} seconds for the prediction.")
+  }
 
+  private def PerformTraining(sc: SparkContext, cleaned_trainingTweetsRDD: RDD[Tweet]) = {
+    val trainstart = System.currentTimeMillis()
+    val (word2VecModel, logisticRegressionModel) = Word2VecClassifier.train(cleaned_trainingTweetsRDD, sc)
+    val trainend = System.currentTimeMillis()
+    println(s"Took ${(trainend - trainstart) / 1000.0} seconds for the training.")
+    (word2VecModel, logisticRegressionModel)
+  }
 
+  private def SetupWord2VecField(trainFile: String, trainTweets: Array[Tweet]) = {
+    Word2VecClassifier._lrModelFilename = trainFile + "lrModel"
+    Word2VecClassifier._word2VecModelFilename = trainFile + "w2vModel"
+    Word2VecClassifier._numberOfClasses = trainTweets.map(x => x.label).distinct.length
+  }
 
+  private def DataStatistics(trainTweets: Array[Tweet], testTweets: Array[Tweet]) = {
+    //place a debug point or prints to see the statistics
+    val trainCount = trainTweets.length
+    val testCount = testTweets.length
+    val numClasses = trainTweets.map(x => x.label).distinct.length
+    val minClass = trainTweets.groupBy(x => x.label).mapValues(_.length).map(x => (x._2, x._1)).min
+    val maxClass = trainTweets.groupBy(x => x.label).mapValues(_.length).map(x => (x._2, x._1)).max
   }
 }
