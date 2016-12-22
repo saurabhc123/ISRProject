@@ -24,7 +24,7 @@ object Word2VecClassifier{
 
 
 
-  val _lrModelFilename = "data/lrclassifier.model"
+  var _lrModelFilename = "data/lrclassifier.model"
   val _threshold = 0.25
   var _numberOfClasses = 9
   var _word2VecModelFilename = "data/word2vec.model"
