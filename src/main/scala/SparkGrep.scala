@@ -113,8 +113,15 @@ object SparkGrep {
     //place a debug point or prints to see the statistics
     val trainCount = trainTweets.length
     val testCount = testTweets.length
-    val numClasses = trainTweets.map(x => x.label).distinct.length
-    val minClass = trainTweets.groupBy(x => x.label).mapValues(_.length).map(x => (x._2, x._1)).min
-    val maxClass = trainTweets.groupBy(x => x.label).mapValues(_.length).map(x => (x._2, x._1)).max
+    val bothTweets = trainTweets ++ testTweets
+    val numClasses = bothTweets.map(x => x.label).distinct.length
+    val minClass = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).valuesIterator.min
+    val minClassCount = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).toList.count(x => x._2 == minClass)
+    val maxClass = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).valuesIterator.max
+    val numToAmount = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).toList.groupBy(x => x._2).mapValues(_.size)
+    for (i <- 1 to maxClass){
+      println(i + "\t" + numToAmount.getOrElse(i,0))
+    }
+    println("the stats have been generated")
   }
 }
