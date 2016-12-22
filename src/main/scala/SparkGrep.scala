@@ -73,7 +73,7 @@ object SparkGrep {
     Word2VecClassifier._word2VecModelFilename = trainFile +"w2vModel"
     Word2VecClassifier._numberOfClasses = trainTweets.map(x => x.label).distinct.length
     val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
-    val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions)
+    val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
     // start timer?
     val trainstart = System.currentTimeMillis()
     val (word2VecModel, logisticRegressionModel) = Word2VecClassifier.train(cleaned_trainingTweetsRDD,sc)
