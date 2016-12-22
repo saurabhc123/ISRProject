@@ -1,5 +1,6 @@
 package isr.project
 
+
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import org.apache.hadoop.hbase.client.{ConnectionFactory, HTable, Result, Scan}
 import org.apache.hadoop.hbase.util.Bytes
@@ -124,6 +125,7 @@ object DataRetriever {
     val key = Bytes.toString(cell.getRowArray, cell.getRowOffset, cell.getRowLength)
     val words = Bytes.toString(cell.getValueArray, cell.getValueOffset, cell.getValueLength)
     Tweet(key,words)
+    null
   }
 
   def retrieveTrainingTweetsFromFile(fileName:String, sc : SparkContext) : RDD[Tweet] = {
