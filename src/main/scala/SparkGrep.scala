@@ -75,10 +75,23 @@ object SparkGrep {
     val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
     val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions)
     // start timer?
-    val start = System.currentTimeMillis()
-    Word2VecClassifier.train(cleaned_trainingTweetsRDD,sc)
-    val end = System.currentTimeMillis()
-    println(s"Took ${(end - start) / 1000.0} seconds for the training.")
+    val trainstart = System.currentTimeMillis()
+    val (word2VecModel, logisticRegressionModel) = Word2VecClassifier.train(cleaned_trainingTweetsRDD,sc)
+    val trainend = System.currentTimeMillis()
+    println(s"Took ${(trainend - trainstart) / 1000.0} seconds for the training.")
+
+
+
+    val testTweetsRDD = sc.parallelize(testTweets,testing_partitions)
+    val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions)
+    val teststart = System.currentTimeMillis()
+    val predictions = Word2VecClassifier.predict(cleaned_testTweetsRDD,sc,word2VecModel,logisticRegressionModel)
+    val metricBasedPrediction = cleaned_testTweetsRDD.map(x => x.label.get).zip(predictions.map(x => x.label.get)).map(x => (x._2,x._1))
+    Word2VecClassifier.GenerateClassifierMetrics(metricBasedPrediction,"LRW2VClassifier",Word2VecClassifier._numberOfClasses)
+    val testEnd = System.currentTimeMillis()
+    println(s"Took ${(testEnd - teststart) / 1000.0} seconds for the prediction.")
+
+
 
   }
 }

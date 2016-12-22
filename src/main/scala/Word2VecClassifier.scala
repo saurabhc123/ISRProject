@@ -33,7 +33,7 @@ object Word2VecClassifier{
 
 
 
-  def train(tweets: RDD[Tweet], sc:SparkContext): Unit = {
+  def train(tweets: RDD[Tweet], sc:SparkContext): (Word2VecModel,LogisticRegressionModel) = {
     val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
     val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
     val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
@@ -86,6 +86,7 @@ object Word2VecClassifier{
 
     val logisticRegressionModel = GenerateOptimizedModel(trainingSet,bcNumberOfClasses.value)
     logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
+    return (word2vecModel,logisticRegressionModel)
   }
 
   def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): RDD[Tweet] = {
