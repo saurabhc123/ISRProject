@@ -8,12 +8,11 @@ import isr.project.Tweet
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
-import org.apache.spark.mllib.evaluation.MulticlassMetrics
+import org.apache.spark.mllib.evaluation.{MulticlassMetrics, MultilabelMetrics}
 import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
-
 
 import scala.util.Try
 
@@ -56,7 +55,7 @@ object Word2VecClassifier{
     val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable).cache()
 
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
-    word2vecModel.save(sc, bcWord2VecModelFilename.value)
+    //word2vecModel.save(sc, bcWord2VecModelFilename.value)
 
 
     def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
@@ -77,19 +76,13 @@ object Word2VecClassifier{
 
     // Classification
     println("String Learning and evaluating models")
-    //val Array(x_train, x_test) = trainingSet.randomSplit(Array(0.7, 0.3))
-    //testSet.repartition(partitionCount)
-
-    //val trainingRDD = trainingSet.toJavaRDD()
-    //val svmModel = SVMMultiClassOVAWithSGD.train(trainingRDD, 100 )
-    // Compute raw scores on the test set.
 
     val logisticRegressionModel = GenerateOptimizedModel(trainingSet,bcNumberOfClasses.value)
-    logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
+    //logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
     return (word2vecModel,logisticRegressionModel)
   }
 
-  def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): RDD[Tweet] = {
+  def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): (RDD[Tweet], RDD[(Double, Double)]) = {
     //val sc = new SparkContext()
 
     //Broadcast the variables
@@ -139,11 +132,15 @@ object Word2VecClassifier{
       val prediction = logisticRegressionModel.predict(features)
       Tweet(id,tweetText,Option(prediction))
     }
+    val logisticRegressionPredLabel = testSet.map { case (Tweet(id,tweetText,label), features) =>
+      val prediction = logisticRegressionModel.predict(features)
+      (prediction,label.getOrElse(9999999999.0))
+    }
     println("<---- done")
     val end = System.currentTimeMillis()
     println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
 
-    return logisticRegressionPredictions
+    return (logisticRegressionPredictions, logisticRegressionPredLabel)
   }
 
 
@@ -368,26 +365,32 @@ object Word2VecClassifier{
   : Unit = {
     // Get evaluation metrics.
     val metrics = new MulticlassMetrics(predictionAndLabels)
+    val otherMetrics = new MultilabelMetrics(predictionAndLabels.map(elem => (Array(elem._1), Array(elem._2))))
     //val uniqueLabels = predictionAndLabels.map(x => x._1).
 
-    for (i <- 1 to bcNumberOfClasses - 1) {
+    for (i <- metrics.labels) {
     //for (i <- uniqueLabels) {
       val classLabel = i
       println(s"\n***********   Class:$classLabel   *************")
       println(s"F1 Score:${metrics.fMeasure(classLabel)}")
       println(s"True Positive:${metrics.truePositiveRate(classLabel)}")
       println(s"False Positive:${metrics.falsePositiveRate(classLabel)}")
+      println(s"Precision:${metrics.precision(classLabel)}")
+      println(s"Recall:${metrics.recall(classLabel)}")
     }
-
     println(s"\nConfusion Matrix \n${metrics.confusionMatrix}")
-
     val f1Measure = metrics.weightedFMeasure
     val precision = metrics.weightedPrecision
     val recall = metrics.weightedRecall
+    val macrof1 = metrics.labels.map(lab => metrics.fMeasure(lab)).sum/metrics.labels.length
+    // this (otherMetrics.microF1Measure) gives the exact same as metrics.fmeasure when I was testing it
+    val microf1 = otherMetrics.microF1Measure
     println(s"\n***********   Classifier Results for $classifierType   *************")
-    println(s"F1-Measure = $f1Measure")
+    println(s"Weighted F1-Measure = $f1Measure")
     println(s"Weighted Precision = $precision")
     println(s"Weighted Recall = $recall")
+    println(s"Macro F1 = $macrof1")
+    println(s"Micro F1 = $microf1")
 
     println(s"\n***********   End of Classifier Results for $classifierType   *************")
   }

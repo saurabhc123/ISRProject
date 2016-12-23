@@ -40,7 +40,7 @@ object DataRetriever {
     //Perform a cold start of the model pipeline so that this loading
     //doesn't disrupt the read later.
     val coldTweet = sc.parallelize(Array[Tweet]{ Tweet("id", "Some tweet")})
-    val predictedTweets = Word2VecClassifier.predict(coldTweet, sc, word2vecModel, logisticRegressionModel)
+    val (predictedTweets,_) = Word2VecClassifier.predict(coldTweet, sc, word2vecModel, logisticRegressionModel)
     predictedTweets.count
 
     // scan over only the collection
@@ -76,7 +76,7 @@ object DataRetriever {
           println("*********** Cleaning the tweets now. *****************")
           val cleanTweets = CleanTweet.clean(rddT, sc)
           println("*********** Predicting the tweets now. *****************")
-          val predictedTweets = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel, logisticRegressionModel)
+          val (predictedTweets,_) = Word2VecClassifier.predict(cleanTweets, sc, word2vecModel, logisticRegressionModel)
           println("*********** Persisting the tweets now. *****************")
 
           val repartitionedPredictions = predictedTweets.repartition(12)

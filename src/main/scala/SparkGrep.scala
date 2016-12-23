@@ -51,7 +51,8 @@ object SparkGrep {
   }
   def getTweetsFromFile(fileName:String,labelMap:scala.collection.mutable.Map[String,Double], sc: SparkContext): Array[Tweet] = {
     val file = sc.textFile(fileName)
-    val allProductNum = file.map(x => x.split("; ")).filter(!_.isEmpty).map(x => x(0)).distinct().collect()
+    val allProductNum = file.map(x => x.split("; ")).filter(_.length == 3).map(x => x(0)).distinct().collect() ++
+      file.map(x => x.split('|')).filter(_.length == 2).map(x => x(0)).collect()
     var maxLab = 0.0
     if (labelMap.nonEmpty ){
       maxLab = labelMap.valuesIterator.max + 1
@@ -62,7 +63,8 @@ object SparkGrep {
         maxLab = maxLab + 1
       }
     })
-    file.map(x => x.split("; ")).filter(!_.isEmpty).map(x => Tweet(x(1),x(2), labelMap.get(x(0)))).collect()
+    file.map(x => x.split("; ")).filter(_.length == 3).map(x => Tweet(x(1),x(2), labelMap.get(x(0)))).collect()  ++
+        file.map(x => x.split('|')).filter(_.length == 2).map(x => Tweet(java.util.UUID.randomUUID.toString,x(1),labelMap.get(x(0)))).collect()
   }
   def HBaseExperiment(trainFile:String, testFile:String,sc: SparkContext): Unit ={
     var labelMap = scala.collection.mutable.Map[String,Double]()
@@ -75,22 +77,22 @@ object SparkGrep {
     SetupWord2VecField(trainFile, trainTweets)
 
     val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
-    val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
+    //val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
 
-    val (word2VecModel, logisticRegressionModel) = PerformTraining(sc, cleaned_trainingTweetsRDD)
+    val (word2VecModel, logisticRegressionModel) = PerformTraining(sc, trainTweetsRDD)
 
     val testTweetsRDD = sc.parallelize(testTweets,testing_partitions)
-    val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions).cache()
+    //val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions).cache()
 
-    PerformPrediction(sc, word2VecModel, logisticRegressionModel, cleaned_testTweetsRDD)
+    PerformPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
 
   }
 
   private def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
     val teststart = System.currentTimeMillis()
-    val predictions = Word2VecClassifier.predict(cleaned_testTweetsRDD, sc, word2VecModel, logisticRegressionModel)
-    val metricBasedPrediction = cleaned_testTweetsRDD.map(x => x.label.get).zip(predictions.map(x => x.label.get)).map(x => (x._2, x._1))
-    Word2VecClassifier.GenerateClassifierMetrics(metricBasedPrediction, "LRW2VClassifier", Word2VecClassifier._numberOfClasses)
+    val (predictionTweets,predictionLabel) = Word2VecClassifier.predict(cleaned_testTweetsRDD, sc, word2VecModel, logisticRegressionModel)
+    //val metricBasedPrediction = cleaned_testTweetsRDD.map(x => x.label.get).zip(predictions.map(x => x.label.get)).map(x => (x._2, x._1))
+    Word2VecClassifier.GenerateClassifierMetrics(predictionLabel, "LRW2VClassifier", Word2VecClassifier._numberOfClasses)
     val testEnd = System.currentTimeMillis()
     println(s"Took ${(testEnd - teststart) / 1000.0} seconds for the prediction.")
   }
@@ -119,6 +121,7 @@ object SparkGrep {
     val minClassCount = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).toList.count(x => x._2 == minClass)
     val maxClass = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).valuesIterator.max
     val numToAmount = bothTweets.groupBy(x => x.label).map(t => (t._1, t._2.length)).toList.groupBy(x => x._2).mapValues(_.size)
+    println("Histogram begin")
     for (i <- 1 to maxClass){
       println(i + "\t" + numToAmount.getOrElse(i,0))
     }
