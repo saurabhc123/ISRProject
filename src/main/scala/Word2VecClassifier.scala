@@ -55,6 +55,7 @@ object Word2VecClassifier{
     val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable).cache()
 
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
+    // commented out to run on our system
     //word2vecModel.save(sc, bcWord2VecModelFilename.value)
 
 
@@ -78,6 +79,7 @@ object Word2VecClassifier{
     println("String Learning and evaluating models")
 
     val logisticRegressionModel = GenerateOptimizedModel(trainingSet,bcNumberOfClasses.value)
+    // commented out to run on our machines
     //logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
     return (word2vecModel,logisticRegressionModel)
   }
