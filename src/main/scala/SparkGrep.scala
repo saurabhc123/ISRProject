@@ -79,7 +79,7 @@ object SparkGrep {
     val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
     //val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
 
-    val (word2VecModel, logisticRegressionModel) = PerformTraining(sc, trainTweetsRDD)
+    val (word2VecModel, logisticRegressionModel,_) = PerformTraining(sc, trainTweetsRDD)
 
     val testTweetsRDD = sc.parallelize(testTweets,testing_partitions)
     //val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions).cache()
@@ -88,7 +88,7 @@ object SparkGrep {
 
   }
 
-  private def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
+   def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
     val teststart = System.currentTimeMillis()
     val (predictionTweets,predictionLabel) = Word2VecClassifier.predict(cleaned_testTweetsRDD, sc, word2VecModel, logisticRegressionModel)
     //val metricBasedPrediction = cleaned_testTweetsRDD.map(x => x.label.get).zip(predictions.map(x => x.label.get)).map(x => (x._2, x._1))
@@ -97,15 +97,15 @@ object SparkGrep {
     println(s"Took ${(testEnd - teststart) / 1000.0} seconds for the prediction.")
   }
 
-  private def PerformTraining(sc: SparkContext, cleaned_trainingTweetsRDD: RDD[Tweet]) = {
+  def PerformTraining(sc: SparkContext, cleaned_trainingTweetsRDD: RDD[Tweet]) = {
     val trainstart = System.currentTimeMillis()
     val (word2VecModel, logisticRegressionModel) = Word2VecClassifier.train(cleaned_trainingTweetsRDD, sc)
     val trainend = System.currentTimeMillis()
     println(s"Took ${(trainend - trainstart) / 1000.0} seconds for the training.")
-    (word2VecModel, logisticRegressionModel)
+    (word2VecModel, logisticRegressionModel, (trainend-trainstart)/1000.0)
   }
 
-  private def SetupWord2VecField(trainFile: String, trainTweets: Array[Tweet]) = {
+  def SetupWord2VecField(trainFile: String, trainTweets: Array[Tweet]): Unit = {
     Word2VecClassifier._lrModelFilename = trainFile + "lrModel"
     Word2VecClassifier._word2VecModelFilename = trainFile + "w2vModel"
     Word2VecClassifier._numberOfClasses = trainTweets.map(x => x.label).distinct.length
