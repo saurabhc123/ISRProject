@@ -48,14 +48,14 @@ object ExperimentRunner {
   def main(args: Array[String]): Unit = {
     // for the product datasets
     /*val base_dirs = Seq(
-      "data\\product_data\\uol-electronic",
-      "data\\product_data\\uol-non-electronic",
-      "data\\product_data\\uol-book"
+      "data/product_data/uol-electronic",
+      "data/product_data/uol-non-electronic",
+      "data/product_data/uol-book"
     )
     //val suffix = (0 to 9).toList.map(_.toString)
     */
     // for the small tweet datasets
-    val base_dirs = Seq("data\\accuracy_experiment\\data")
+    val base_dirs = Seq("data/accuracy_experiment/data")
     val suffix = (2 to 10).toList.map(_.toString+ ".rw")
 
     val conf = new SparkConf()
@@ -66,9 +66,9 @@ object ExperimentRunner {
     var allMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs){
       // for the product datasets
-      //val experimentalMetrics = run_experiments(dir,"\\train","\\test",suffix,3,sc)
+      //val experimentalMetrics = run_experiments(dir,"/train","/test",suffix,3,sc)
       // for the tweet datasets
-      val experimentalMetrics = run_experiments(dir,"\\train_data","\\test_data",suffix,3,sc)
+      val experimentalMetrics = run_experiments(dir,"/train_data","/test_data",suffix,3,sc)
       allMetrics = allMetrics :+ experimentalMetrics
     }
     for ((dir,idx) <- base_dirs.zipWithIndex){
