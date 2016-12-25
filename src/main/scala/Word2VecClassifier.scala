@@ -4,12 +4,11 @@ package org.apache.spark.mllib.linalg
 
 import java.io.IOException
 
-import isr.project.Tweet
+import isr.project.{IdfFeatureGenerator, Tweet}
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.{LogisticRegressionModel, LogisticRegressionWithLBFGS}
 import org.apache.spark.mllib.evaluation.{MulticlassMetrics, MultilabelMetrics}
-import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
+import org.apache.spark.mllib.feature.{HashingTF, IDFModel, Word2Vec, Word2VecModel}
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
@@ -21,10 +20,8 @@ import scala.util.Try
 object Word2VecClassifier{
 
 
-
-
+  val _threshold = 0.0
   var _lrModelFilename = "data/lrclassifier.model"
-  val _threshold = 0.25
   var _numberOfClasses = 9
   var _word2VecModelFilename = "data/word2vec.model"
 
@@ -57,9 +54,12 @@ object Word2VecClassifier{
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
     // commented out to run on our system
     //word2vecModel.save(sc, bcWord2VecModelFilename.value)
-
+    val idfGenerator = new IdfFeatureGenerator()
 
     def wordFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => Try(word2vecModel.transform(w))).filter(_.isSuccess).map(x => x.get)
+
+
+
 
     def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
@@ -82,6 +82,24 @@ object Word2VecClassifier{
     // commented out to run on our machines
     //logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
     return (word2vecModel,logisticRegressionModel)
+  }
+
+  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
+  : LogisticRegressionModel = {
+
+    /*val foldCount = 10
+    //Break the trainingData into n-folds
+    for (i <- 1 to foldCount) {
+      val setSize = trainingData.count()
+      val subTrainData = trainingData.fo
+
+    }*/
+
+
+
+    new LogisticRegressionWithLBFGS()
+      .setNumClasses(bcNumberOfClasses)
+      .run(trainingData)
   }
 
   def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): (RDD[Tweet], RDD[(Double, Double)]) = {
@@ -144,7 +162,6 @@ object Word2VecClassifier{
 
     return (logisticRegressionPredictions, logisticRegressionPredLabel)
   }
-
 
   def run(args: Array[String], delimiter: Char) {
 
@@ -222,6 +239,9 @@ object Word2VecClassifier{
 
     var word2vecModel:Word2VecModel = null
 
+    val idfGenerator = new IdfFeatureGenerator()
+    val idfModel = idfGenerator.InitializeIDF(samplePairs.map(x => x._2))
+
     //reviewWordsPairs.repartition(partitionCount)
     reviewWordsPairs.cache()
 
@@ -247,10 +267,13 @@ object Word2VecClassifier{
 
     def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
+    def wordIdfFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => GetIdfForWord(w, idfModel))
+
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
     // Create feature vectors
     val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
+    val wordIdfFeaturesTrain = reviewWordsPairs mapValues wordIdfFeatures
     //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
@@ -272,6 +295,7 @@ object Word2VecClassifier{
     val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
     val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
     val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
+
     val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
     val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
@@ -297,6 +321,16 @@ object Word2VecClassifier{
     val end = System.currentTimeMillis()
     println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
     //Thread.sleep(10000)
+  }
+
+  def GetIdfForWord(tweetText: String, idfModel: IDFModel): Vector = {
+    if (idfModel == null)
+      throw new Exception("IDF dictionary not initialized")
+    //Everything is fine. Return the IDF value of the word.
+    val hashingTF = new HashingTF(160)
+    val features = hashingTF.transform(tweetText)
+    val wordFeatures = idfModel.transform(features)
+    return wordFeatures
   }
 
   def GeneratePredictions(trainingData: RDD[LabeledPoint],
@@ -342,24 +376,6 @@ object Word2VecClassifier{
       //val eric = logisticRegressionPredictions.filter(p => p._3.max > 0.5)
       (logisticRegressionPredictions.map(pred => (if (pred._3.max == pred._3(pred._1.toInt) && pred._3(pred._1.toInt) > _threshold) pred._1 else 0.0, pred._2)), start)
     }
-
-  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
-  : LogisticRegressionModel = {
-
-    /*val foldCount = 10
-    //Break the trainingData into n-folds
-    for (i <- 1 to foldCount) {
-      val setSize = trainingData.count()
-      val subTrainData = trainingData.fo
-
-    }*/
-
-
-
-    new LogisticRegressionWithLBFGS()
-      .setNumClasses(bcNumberOfClasses)
-      .run(trainingData)
-  }
 
   def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)]
                                 ,classifierType : String,
