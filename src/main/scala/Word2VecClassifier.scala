@@ -240,7 +240,7 @@ object Word2VecClassifier{
     var word2vecModel:Word2VecModel = null
 
     val idfGenerator = new IdfFeatureGenerator()
-    val idfModel = idfGenerator.InitializeIDF(samplePairs.map(x => x._2))
+    val (idfModel, hashingModel) = idfGenerator.InitializeIDF(samplePairs.map(x => x._2))
 
     //reviewWordsPairs.repartition(partitionCount)
     reviewWordsPairs.cache()
@@ -267,18 +267,20 @@ object Word2VecClassifier{
 
     def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
-    def wordIdfFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => GetIdfForWord(w, idfModel))
+    def wordIdfFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => GetIdfForWord(w, idfModel, hashingModel)._2)
 
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
     // Create feature vectors
     val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
-    val wordIdfFeaturesTrain = reviewWordsPairs mapValues wordIdfFeatures
+    //val wordIdfFeaturesTrain = reviewWordsPairs mapValues wordIdfFeatures
+    val wordIdfFeaturesTrain = samplePairs.mapValues(t => t.tweetText).mapValues(tweets => GetIdfForWord(tweets, idfModel, hashingModel))
     //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
-    val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
-    val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
-    val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
-      case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
+    val inter2Train = wordIdfFeaturesTrain
+    //val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
+    //val avgWordFeaturesPairTrain = inter2Train mapValues avgWordFeatures
+    val featuresPairTrain = wordIdfFeaturesTrain join samplePairs mapValues {
+      case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features._2)
     }
     val trainingSet = featuresPairTrain.values
 
@@ -296,10 +298,12 @@ object Word2VecClassifier{
     val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
     val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
 
+    val wordIdfFeaturesTest = samplePairsTest.mapValues(t => t.tweetText).mapValues(tweets => GetIdfForWord(tweets, idfModel, hashingModel))
+
     val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
-    val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
-      case (features, Tweet(id, tweetText, label)) => (LabeledPoint(label.get, features), tweetText)
+    val featuresPairTest = wordIdfFeaturesTest join samplePairsTest mapValues {
+      case (features, Tweet(id, tweetText, label)) => (LabeledPoint(label.get, features._2), tweetText)
     }
     val testSet = featuresPairTest.values
     testSet.cache()
@@ -323,14 +327,13 @@ object Word2VecClassifier{
     //Thread.sleep(10000)
   }
 
-  def GetIdfForWord(tweetText: String, idfModel: IDFModel): Vector = {
+  def GetIdfForWord(tweetText: String, idfModel: IDFModel, hashingModel: HashingTF): (String, Vector) = {
     if (idfModel == null)
       throw new Exception("IDF dictionary not initialized")
     //Everything is fine. Return the IDF value of the word.
-    val hashingTF = new HashingTF(160)
-    val features = hashingTF.transform(tweetText)
+    val features = hashingModel.transform(tweetText.split(" "))
     val wordFeatures = idfModel.transform(features)
-    return wordFeatures
+    return (tweetText, wordFeatures)
   }
 
   def GeneratePredictions(trainingData: RDD[LabeledPoint],
