@@ -1,11 +1,11 @@
 package isr.project
 
-import org.apache.spark.mllib.linalg.Word2VecClassifier
-import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.mllib.classification.LogisticRegressionModel
 import org.apache.spark.mllib.feature.Word2VecModel
+import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{SparkConf, SparkContext}
 
 object SparkGrep {
   def tweetchange(tweet: Tweet): Tweet = {
@@ -49,6 +49,29 @@ object SparkGrep {
     val end = System.currentTimeMillis()
     println(s"Took ${(end - start) / 1000.0} seconds for the whole process.")
   }
+
+  def HBaseExperiment(trainFile: String, testFile: String, sc: SparkContext): Unit = {
+    var labelMap = scala.collection.mutable.Map[String,Double]()
+    val training_partitions = 8
+    val testing_partitions = 8
+    val trainTweets = getTweetsFromFile(trainFile, labelMap, sc)
+    val testTweets = getTweetsFromFile(testFile, labelMap, sc)
+
+    DataStatistics(trainTweets, testTweets)
+    SetupWord2VecField(trainFile, trainTweets)
+
+    val trainTweetsRDD = sc.parallelize(trainTweets, training_partitions)
+    //val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
+
+    val (word2VecModel, logisticRegressionModel, _) = PerformTraining(sc, trainTweetsRDD)
+
+    val testTweetsRDD = sc.parallelize(testTweets, testing_partitions)
+    //val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions).cache()
+
+    PerformPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
+
+  }
+
   def getTweetsFromFile(fileName:String,labelMap:scala.collection.mutable.Map[String,Double], sc: SparkContext): Array[Tweet] = {
     val file = sc.textFile(fileName)
     val allProductNum = file.map(x => x.split("; ")).filter(_.length == 3).map(x => x(0)).distinct().collect() ++
@@ -65,27 +88,6 @@ object SparkGrep {
     })
     file.map(x => x.split("; ")).filter(_.length == 3).map(x => Tweet(x(1),x(2), labelMap.get(x(0)))).collect()  ++
         file.map(x => x.split('|')).filter(_.length == 2).map(x => Tweet(java.util.UUID.randomUUID.toString,x(1),labelMap.get(x(0)))).collect()
-  }
-  def HBaseExperiment(trainFile:String, testFile:String,sc: SparkContext): Unit ={
-    var labelMap = scala.collection.mutable.Map[String,Double]()
-    val training_partitions = 8
-    val testing_partitions = 8
-    val trainTweets = getTweetsFromFile(trainFile,labelMap,sc)
-    val testTweets = getTweetsFromFile(testFile,labelMap,sc)
-
-    DataStatistics(trainTweets, testTweets)
-    SetupWord2VecField(trainFile, trainTweets)
-
-    val trainTweetsRDD = sc.parallelize(trainTweets,training_partitions)
-    //val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
-
-    val (word2VecModel, logisticRegressionModel,_) = PerformTraining(sc, trainTweetsRDD)
-
-    val testTweetsRDD = sc.parallelize(testTweets,testing_partitions)
-    //val cleaned_testTweetsRDD = sc.parallelize(CleanTweet.clean(testTweetsRDD,sc).collect(),testing_partitions).cache()
-
-    PerformPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
-
   }
 
    def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
@@ -126,5 +128,13 @@ object SparkGrep {
       println(i + "\t" + numToAmount.getOrElse(i,0))
     }
     println("the stats have been generated")
+  }
+
+  def PerformIDFTraining(sc: SparkContext, cleaned_trainingTweetsRDD: RDD[Tweet]) = {
+    val trainstart = System.currentTimeMillis()
+    val (idfModel, hashingModel, logisticRegressionModel) = Word2VecClassifier.trainIdfClassifer(cleaned_trainingTweetsRDD, sc)
+    val trainend = System.currentTimeMillis()
+    println(s"Took ${(trainend - trainstart) / 1000.0} seconds for the IDF model training.")
+    (idfModel, hashingModel, logisticRegressionModel, (trainend - trainstart) / 1000.0)
   }
 }
