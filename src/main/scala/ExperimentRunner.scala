@@ -14,9 +14,49 @@ object ExperimentRunner {
   val training_partitions = 8
   val testing_partitions = 8
 
-  def performPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, testTweetRdd: RDD[Tweet]): (RDD[Tweet], RDD[(Double, Double)]) = {
-    val (predictionTweets,predictionLabel) = Word2VecClassifier.predict(testTweetRdd, sc, word2VecModel, logisticRegressionModel)
-    (predictionTweets,predictionLabel)
+  def main(args: Array[String]): Unit = {
+    // for the product datasets
+    /*val base_dirs = Seq(
+      "data/product_data/uol-electronic",
+      "data/product_data/uol-non-electronic",
+      "data/product_data/uol-book"
+    )
+    //val suffix = (0 to 9).toList.map(_.toString)
+    */
+    // for the small tweet datasets
+    val base_dirs = Seq("data/accuracy_experiment/data")
+    val suffix = (2 to 10).toList.map(_.toString + ".rw")
+
+    val conf = new SparkConf()
+      .setMaster("local[*]")
+      .setAppName("ExperimentOrchestration")
+    val sc = new SparkContext(conf)
+    turnOffLogging(sc)
+    var allMetrics = List[List[List[ExperimentalMetrics]]]()
+    for (dir <- base_dirs) {
+      // for the product datasets
+      //val experimentalMetrics = run_experiments(dir,"/train","/test",suffix,3,sc)
+      // for the tweet datasets
+      val experimentalMetrics = run_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
+      allMetrics = allMetrics :+ experimentalMetrics
+    }
+    for ((dir, idx) <- base_dirs.zipWithIndex) {
+      println(s"####Experiment dir $dir####")
+      val experimentMetrics = allMetrics(idx)
+      println(s"###Per set ###")
+      for (setMetric <- experimentMetrics) {
+        println(ExperimentalMetrics.header())
+        for (met <- setMetric) {
+          println(met.toString())
+        }
+      }
+      println(s"## ALL ##")
+      println(ExperimentalMetrics.header())
+      for (metric <- experimentMetrics.flatten) {
+        println(metric.toString())
+      }
+
+    }
   }
 
   def run_experiments(dir: String,trainFile : String, testFile:String , suffixes: List[String], timesToRunEach: Int, sc:SparkContext): List[List[ExperimentalMetrics]] = {
@@ -35,6 +75,11 @@ object ExperimentRunner {
           SparkGrep.SetupWord2VecField(trainFName,trainTweets)
           val (word2VecModel, logisticRegressionModel,trainTime) = SparkGrep.PerformTraining(sc, trainTweetsRDD)
           val (predictionTweets,predictionLabel) = performPrediction(sc,word2VecModel,logisticRegressionModel,testTweetsRDD)
+
+          //This is how the IDF based classifier would run.
+          val (idfModel, hashingTfModel, idfLrModel, idfTrainTime) = SparkGrep.PerformIDFTraining(sc, trainTweetsRDD)
+          val (predictionIDFTweets, predictionIDFLabels) = Word2VecClassifier.predictForIDFClassifer(testTweetsRDD, sc, idfModel, hashingTfModel, idfLrModel)
+
           val Metrics = MetricsCalculator.GenerateClassifierMetrics(predictionLabel)
           Metrics.trainTime = trainTime
           oneSet = oneSet :+ Metrics
@@ -45,49 +90,9 @@ object ExperimentRunner {
     return experimentSet
   }
 
-  def main(args: Array[String]): Unit = {
-    // for the product datasets
-    /*val base_dirs = Seq(
-      "data/product_data/uol-electronic",
-      "data/product_data/uol-non-electronic",
-      "data/product_data/uol-book"
-    )
-    //val suffix = (0 to 9).toList.map(_.toString)
-    */
-    // for the small tweet datasets
-    val base_dirs = Seq("data/accuracy_experiment/data")
-    val suffix = (2 to 10).toList.map(_.toString+ ".rw")
-
-    val conf = new SparkConf()
-      .setMaster("local[*]")
-      .setAppName("ExperimentOrchestration")
-    val sc = new SparkContext(conf)
-    turnOffLogging(sc)
-    var allMetrics = List[List[List[ExperimentalMetrics]]]()
-    for (dir <- base_dirs){
-      // for the product datasets
-      //val experimentalMetrics = run_experiments(dir,"/train","/test",suffix,3,sc)
-      // for the tweet datasets
-      val experimentalMetrics = run_experiments(dir,"/train_data","/test_data",suffix,3,sc)
-      allMetrics = allMetrics :+ experimentalMetrics
-    }
-    for ((dir,idx) <- base_dirs.zipWithIndex){
-      println(s"####Experiment dir $dir####")
-      val experimentMetrics = allMetrics(idx)
-      println(s"###Per set ###")
-      for(setMetric <- experimentMetrics){
-        println(ExperimentalMetrics.header())
-        for (met <- setMetric){
-          println(met.toString())
-        }
-      }
-      println(s"## ALL ##")
-      println(ExperimentalMetrics.header())
-      for (metric <- experimentMetrics.flatten){
-        println(metric.toString())
-      }
-
-    }
+  def performPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, testTweetRdd: RDD[Tweet]): (RDD[Tweet], RDD[(Double, Double)]) = {
+    val (predictionTweets, predictionLabel) = Word2VecClassifier.predict(testTweetRdd, sc, word2VecModel, logisticRegressionModel)
+    (predictionTweets, predictionLabel)
   }
 
   private def turnOffLogging(sc: SparkContext) = {
