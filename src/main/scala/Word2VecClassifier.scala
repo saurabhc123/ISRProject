@@ -102,6 +102,46 @@ object Word2VecClassifier{
       .run(trainingData)
   }
 
+  def trainIdfClassifer(tweets: RDD[Tweet], sc: SparkContext): (IDFModel, HashingTF, LogisticRegressionModel) = {
+    val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
+    val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
+
+    def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
+
+    def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
+
+    val cleanTrainingTweets = tweets map cleanTweetHtml
+
+    // Words only
+    def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduceOption((x, y) => s"$x $y")
+
+    def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText).getOrElse(""))
+
+    val wordOnlyTrainSample = cleanTrainingTweets map wordOnlySample
+
+    // Word2Vec
+    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
+
+    val idfGenerator = new IdfFeatureGenerator()
+    val (idfModel, hashingModel) = idfGenerator.InitializeIDF(samplePairs.map(x => x._2))
+
+    val wordIdfFeaturesTrain = samplePairs.mapValues(t => t.tweetText).mapValues(tweets => GetIdfForWord(tweets, idfModel, hashingModel))
+
+    val featuresPairTrain = wordIdfFeaturesTrain join samplePairs mapValues {
+      case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features._2)
+    }
+    val trainingSet = featuresPairTrain.values.cache()
+
+    // Classification
+    println("String Learning and evaluating models for IDF features.")
+
+    val logisticRegressionModel = GenerateOptimizedModel(trainingSet, bcNumberOfClasses.value)
+    // commented out to run on our machines
+    //logisticRegressionModel.save(sc, bcLRClassifierModelFilename.value)
+    return (idfModel, hashingModel, logisticRegressionModel)
+  }
+
   def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): (RDD[Tweet], RDD[(Double, Double)]) = {
     //val sc = new SparkContext()
 
@@ -161,6 +201,65 @@ object Word2VecClassifier{
     println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
 
     return (logisticRegressionPredictions, logisticRegressionPredLabel)
+  }
+
+  def predictForIDFClassifer(tweets: RDD[Tweet], sc: SparkContext, idfModel: IDFModel, hashingModel: HashingTF, lrModel: LogisticRegressionModel): (RDD[Tweet], RDD[(Double, Double)]) = {
+    //val sc = new SparkContext()
+
+    //Broadcast the variables
+    //val bcNumberOfClasses = sc.broadcast(_numberOfClasses)
+    //val bcWord2VecModelFilename = sc.broadcast(_word2VecModelFilename)
+    //val bcLRClassifierModelFilename = sc.broadcast(_lrModelFilename)
+
+    def cleanHtml(str: String) = str.replaceAll( """<(?!\/?a(?=>|\s.*>))\/?.*?>""", "")
+
+    def cleanTweetHtml(sample: Tweet) = sample copy (tweetText = cleanHtml(sample.tweetText))
+
+    val cleanTestTweets = tweets map cleanTweetHtml
+
+    // Words only
+    def cleanWord(str: String) = str.split(" ").map(_.trim.toLowerCase).filter(_.size > 0).map(_.replaceAll("\\W", "")).reduceOption((x, y) => s"$x $y")
+
+    def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText).getOrElse(""))
+
+    val wordOnlyTestSample = cleanTestTweets map wordOnlySample
+    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
+
+
+    val wordIdfFeaturesTest = samplePairsTest.mapValues(t => t.tweetText).mapValues(tweets => GetIdfForWord(tweets, idfModel, hashingModel))
+    val featuresPairTest = wordIdfFeaturesTest join samplePairsTest mapValues {
+      case (features, Tweet(id, tweetText, label)) => (Tweet(id, tweetText, label), features._2)
+    }
+    val testSet = featuresPairTest.values
+    testSet.cache()
+
+
+
+    val logisticRegressionModel = lrModel
+
+    val start = System.currentTimeMillis()
+    val logisticRegressionPredictions = testSet.map { case (Tweet(id, tweetText, label), features) =>
+      val prediction = logisticRegressionModel.predict(features)
+      Tweet(id, tweetText, Option(prediction))
+    }
+    val logisticRegressionPredLabel = testSet.map { case (Tweet(id, tweetText, label), features) =>
+      val prediction = logisticRegressionModel.predict(features)
+      (prediction, label.getOrElse(9999999999.0))
+    }
+    println("<---- done")
+    val end = System.currentTimeMillis()
+    println(s"Took ${(end - start) / 1000.0} seconds for Prediction.")
+
+    return (logisticRegressionPredictions, logisticRegressionPredLabel)
+  }
+
+  def GetIdfForWord(tweetText: String, idfModel: IDFModel, hashingModel: HashingTF): (String, Vector) = {
+    if (idfModel == null)
+      throw new Exception("IDF dictionary not initialized")
+    //Everything is fine. Return the IDF value of the word.
+    val features = hashingModel.transform(tweetText.split(" "))
+    val wordFeatures = idfModel.transform(features)
+    return (tweetText, wordFeatures)
   }
 
   def run(args: Array[String], delimiter: Char) {
@@ -267,6 +366,7 @@ object Word2VecClassifier{
 
     def avgWordFeatures(wordFeatures: Iterable[Vector]): Vector = Vectors.fromBreeze(wordFeatures.map(_.toBreeze).reduceLeft((x, y) => x + y) / wordFeatures.size.toDouble)
 
+    //def wordIdfFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => GetIdfForWord(w, idfModel, hashingModel)._2)
     def wordIdfFeatures(words: Iterable[String]): Iterable[Vector] = words.map(w => GetIdfForWord(w, idfModel, hashingModel)._2)
 
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
@@ -275,6 +375,7 @@ object Word2VecClassifier{
     val wordFeaturePairTrain = reviewWordsPairs mapValues wordFeatures
     //val wordIdfFeaturesTrain = reviewWordsPairs mapValues wordIdfFeatures
     val wordIdfFeaturesTrain = samplePairs.mapValues(t => t.tweetText).mapValues(tweets => GetIdfForWord(tweets, idfModel, hashingModel))
+
     //val intermediateVectors = wordFeaturePair.mapValues(x => x.map(_.asBreeze))
     val inter2Train = wordIdfFeaturesTrain
     //val inter2Train = wordFeaturePairTrain.filter(!_._2.isEmpty)
@@ -325,15 +426,6 @@ object Word2VecClassifier{
     val end = System.currentTimeMillis()
     println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
     //Thread.sleep(10000)
-  }
-
-  def GetIdfForWord(tweetText: String, idfModel: IDFModel, hashingModel: HashingTF): (String, Vector) = {
-    if (idfModel == null)
-      throw new Exception("IDF dictionary not initialized")
-    //Everything is fine. Return the IDF value of the word.
-    val features = hashingModel.transform(tweetText.split(" "))
-    val wordFeatures = idfModel.transform(features)
-    return (tweetText, wordFeatures)
   }
 
   def GeneratePredictions(trainingData: RDD[LabeledPoint],
