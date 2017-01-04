@@ -50,8 +50,8 @@ object Word2VecClassifier{
     val wordOnlyTrainSample = cleanTrainingTweets map wordOnlySample
 
     // Word2Vec
-    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
-    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable).cache()
+    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s)
+    val reviewWordsPairs: RDD[(String, Iterable[String])] = samplePairs.mapValues(_.tweetText.split(" ").toIterable)
 
     val word2vecModel = new Word2Vec().fit(reviewWordsPairs.values)
     // commented out to run on our system
@@ -72,7 +72,7 @@ object Word2VecClassifier{
     val featuresPairTrain = avgWordFeaturesPairTrain join samplePairs mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features)
     }
-    val trainingSet = featuresPairTrain.values.cache()
+    val trainingSet = featuresPairTrain.values
 
     // Classification
     println("String Learning and evaluating models")
@@ -102,7 +102,7 @@ object Word2VecClassifier{
     val wordOnlyTrainSample = cleanTrainingTweets map wordOnlySample
 
     // Word2Vec
-    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s).cache()
+    val samplePairs = wordOnlyTrainSample.map(s => s.id -> s)
 
     val idfGenerator = new IdfFeatureGenerator()
     val (idfModel, hashingModel) = idfGenerator.InitializeIDF(samplePairs.map(x => x._2))
@@ -112,7 +112,7 @@ object Word2VecClassifier{
     val featuresPairTrain = wordIdfFeaturesTrain join samplePairs mapValues {
       case (features, Tweet(id, tweetText, label)) => LabeledPoint(label.get, features._2)
     }
-    val trainingSet = featuresPairTrain.values.cache()
+    val trainingSet = featuresPairTrain.values
 
     // Classification
     println("String Learning and evaluating models for IDF features.")
@@ -171,7 +171,7 @@ object Word2VecClassifier{
     def filterNullFeatures(wordFeatures: Iterable[Vector]): Iterable[Vector] = if (wordFeatures.isEmpty) wordFeatures.drop(1) else wordFeatures
 
     val wordOnlyTestSample = cleanTestTweets map wordOnlySample
-    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
+    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s)
     val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
     val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
     val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
@@ -222,7 +222,7 @@ object Word2VecClassifier{
     def wordOnlySample(sample: Tweet) = sample copy (tweetText = cleanWord(sample.tweetText).getOrElse(""))
 
     val wordOnlyTestSample = cleanTestTweets map wordOnlySample
-    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s).cache()
+    val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s)
 
 
     val wordIdfFeaturesTest = samplePairsTest.mapValues(t => t.tweetText).mapValues(tweets => GetIdfForWord(tweets, idfModel, hashingModel))
@@ -230,7 +230,7 @@ object Word2VecClassifier{
       case (features, Tweet(id, tweetText, label)) => (Tweet(id, tweetText, label), features._2)
     }
     val testSet = featuresPairTest.values
-    testSet.cache()
+ //   testSet.cache()
 
 
 

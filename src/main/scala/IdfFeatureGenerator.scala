@@ -27,7 +27,7 @@ class IdfFeatureGenerator() {
     //val sampleString = "abc"
     // While applying HashingTF only needs a single pass to the data, applying IDF needs two passes:
     // First to compute the IDF vector and second to scale the term frequencies by IDF.
-    tf.cache()
+ //   tf.cache()
     val idfModel = new IDF().fit(tf)
 
     /*val sampleStringHash = hashingTF.transform(sampleString.split(" "))

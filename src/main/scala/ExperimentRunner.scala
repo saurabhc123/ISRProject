@@ -16,37 +16,39 @@ object ExperimentRunner {
 
   def main(args: Array[String]): Unit = {
     // for the product datasets
-    /*val base_dirs = Seq(
-      "data/product_data/uol-electronic",
-      "data/product_data/uol-non-electronic",
+    val base_dirs = Seq(
+      //"data/product_data/uol-electronic",
+      //"data/product_data/uol-non-electronic"
       "data/product_data/uol-book"
     )
-    //val suffix = (0 to 9).toList.map(_.toString)
-    */
+    val suffix = (0 to 9).toList.map(_.toString)
+    
     // for the small tweet datasets
-    val base_dirs = Seq("data/accuracy_experiment/data")
-    val suffix = (2 to 10).toList.map(_.toString + ".rw")
+    /*val base_dirs = Seq("data/accuracy_experiment/data")
+    val suffix = (2 to 10).toList.map(_.toString + ".rw")*/
 
-    val conf = new SparkConf()
+    /*val conf = new SparkConf()
       .setMaster("local[*]")
       .setAppName("ExperimentOrchestration")
-    val sc = new SparkContext(conf)
+    val sc = new SparkContext(conf)*/
+    val sc = new SparkContext()
     turnOffLogging(sc)
     var allMetrics = List[List[List[ExperimentalMetrics]]]()
     var allIDFMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs) {
       // for the product datasets
-      //val experimentalMetrics = run_experiments(dir,"/train","/test",suffix,3,sc)
+      val experimentalMetrics = run_w2v_experiments(dir,"/train","/test",suffix,3,sc)
+      //val idfExperimentMetrics = run_idf_experiments(dir,"/train","/test",suffix,3,sc)
       // for the tweet datasets
-      val experimentalMetrics = run_w2v_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
-      val idfExperimentMetrics = run_idf_experiments(dir,"/train_data","/test_data",suffix,3,sc)
+      //val experimentalMetrics = run_w2v_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
+      //val idfExperimentMetrics = run_idf_experiments(dir,"/train_data","/test_data",suffix,3,sc)
       allMetrics = allMetrics :+ experimentalMetrics
-      allIDFMetrics = allIDFMetrics :+idfExperimentMetrics
+      //allIDFMetrics = allIDFMetrics :+idfExperimentMetrics
     }
     println("NOW W2V METRICS")
     printMetricResults(base_dirs, allMetrics)
-    println("NOW IDF METRICS")
-    printMetricResults(base_dirs,allIDFMetrics)
+    //println("NOW IDF METRICS")
+    //printMetricResults(base_dirs,allIDFMetrics)
 
   }
 
@@ -80,9 +82,9 @@ object ExperimentRunner {
         println(s"Running ${trainFName} ${testFName}")
         val m = scala.collection.mutable.Map[String,Double]()
         val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
-        val trainTweetsRDD = sc.parallelize(trainTweets, training_partitions)
+        val trainTweetsRDD = sc.parallelize(trainTweets/*, training_partitions*/)
         val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
-        val testTweetsRDD = sc.parallelize(testTweets, testing_partitions)
+        val testTweetsRDD = sc.parallelize(testTweets/*, testing_partitions*/)
         SparkGrep.SetupWord2VecField(trainFName, trainTweets)
         //This is how the IDF based classifier would run.
         val (idfModel, hashingTfModel, idfLrModel, idfTrainTime) = SparkGrep.PerformIDFTraining(sc, trainTweetsRDD)
@@ -107,9 +109,9 @@ object ExperimentRunner {
         println(s"Running ${trainFName} ${testFName}")
         val m = scala.collection.mutable.Map[String,Double]()
         val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
-        val trainTweetsRDD = sc.parallelize(trainTweets, training_partitions)
+        val trainTweetsRDD = sc.parallelize(trainTweets/*, training_partitions*/)
         val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
-        val testTweetsRDD = sc.parallelize(testTweets, testing_partitions)
+        val testTweetsRDD = sc.parallelize(testTweets/*, testing_partitions*/)
         SparkGrep.SetupWord2VecField(trainFName, trainTweets)
         val (word2VecModel, logisticRegressionModel, trainTime) = SparkGrep.PerformTraining(sc, trainTweetsRDD)
         val (predictionTweets, predictionLabel) = performPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
