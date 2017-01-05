@@ -1,10 +1,10 @@
 import isr.project.{SparkGrep, Tweet}
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.LogisticRegressionModel
 import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.mllib.linalg.Word2VecClassifier
 import org.apache.spark.rdd.RDD
-import org.apache.spark.{SparkConf, SparkContext}
 
 /**
   * Created by Eric on 12/23/2016.
@@ -17,9 +17,9 @@ object ExperimentRunner {
   def main(args: Array[String]): Unit = {
     // for the product datasets
     val base_dirs = Seq(
-      //"data/product_data/uol-electronic",
+      "data/product_data/uol-electronic"
       //"data/product_data/uol-non-electronic"
-      "data/product_data/uol-book"
+      //"data/product_data/uol-book"
     )
     val suffix = (0 to 9).toList.map(_.toString)
     
@@ -37,18 +37,18 @@ object ExperimentRunner {
     var allIDFMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs) {
       // for the product datasets
-      val experimentalMetrics = run_w2v_experiments(dir,"/train","/test",suffix,3,sc)
-      //val idfExperimentMetrics = run_idf_experiments(dir,"/train","/test",suffix,3,sc)
+      //val experimentalMetrics = run_w2v_experiments(dir,"/train","/test",suffix,3,sc)
+      val idfExperimentMetrics = run_idf_experiments(dir, "/train", "/test", suffix, 3, sc)
       // for the tweet datasets
       //val experimentalMetrics = run_w2v_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
       //val idfExperimentMetrics = run_idf_experiments(dir,"/train_data","/test_data",suffix,3,sc)
-      allMetrics = allMetrics :+ experimentalMetrics
-      //allIDFMetrics = allIDFMetrics :+idfExperimentMetrics
+      //allMetrics = allMetrics :+ experimentalMetrics
+      allIDFMetrics = allIDFMetrics :+ idfExperimentMetrics
     }
-    println("NOW W2V METRICS")
-    printMetricResults(base_dirs, allMetrics)
-    //println("NOW IDF METRICS")
-    //printMetricResults(base_dirs,allIDFMetrics)
+    //println("NOW W2V METRICS")
+    //printMetricResults(base_dirs, allMetrics)
+    println("NOW IDF METRICS")
+    printMetricResults(base_dirs, allIDFMetrics)
 
   }
 
@@ -99,6 +99,14 @@ object ExperimentRunner {
     }
     return experimentSet
   }
+
+  private def turnOffLogging(sc: SparkContext) = {
+    sc.setLogLevel(Level.ERROR.toString)
+    Logger.getLogger("org").setLevel(Level.OFF)
+    Logger.getLogger("akka").setLevel(Level.OFF)
+    Logger.getRootLogger.setLevel(Level.ERROR)
+  }
+
   def run_w2v_experiments(dir: String, trainFile: String, testFile: String, suffixes: List[String], timesToRunEach: Int, sc: SparkContext): List[List[ExperimentalMetrics]] = {
     var experimentSet = List[List[ExperimentalMetrics]]()
     for (suffix <- suffixes) {
@@ -128,12 +136,5 @@ object ExperimentRunner {
   def performPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, testTweetRdd: RDD[Tweet]): (RDD[Tweet], RDD[(Double, Double)]) = {
     val (predictionTweets, predictionLabel) = Word2VecClassifier.predict(testTweetRdd, sc, word2VecModel, logisticRegressionModel)
     (predictionTweets, predictionLabel)
-  }
-
-  private def turnOffLogging(sc: SparkContext) = {
-    sc.setLogLevel(Level.ERROR.toString)
-    Logger.getLogger("org").setLevel(Level.OFF)
-    Logger.getLogger("akka").setLevel(Level.OFF)
-    Logger.getRootLogger.setLevel(Level.ERROR)
   }
 }

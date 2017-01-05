@@ -20,7 +20,7 @@ class IdfFeatureGenerator() {
     // Load documents (one per line).
     val documents: RDD[Seq[String]] = tweets.map(tweet => tweet.tweetText.split(" ").toSeq)
     println(documents.first.take(20))
-    val dim = math.pow(2, 16).toInt
+    val dim = math.pow(2, 6).toInt
     val hashingTF = new HashingTF(dim)
     val tf: RDD[linalg.Vector] = hashingTF.transform(documents)
     val sampleString = "west texas tighter ever year fertilizer plant explosion devastating zen"
