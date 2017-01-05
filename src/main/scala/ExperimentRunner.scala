@@ -17,8 +17,8 @@ object ExperimentRunner {
   def main(args: Array[String]): Unit = {
     // for the product datasets
     val base_dirs = Seq(
-      "data/product_data/uol-electronic"
-      //"data/product_data/uol-non-electronic"
+      //"data/product_data/uol-electronic"
+      "data/product_data/uol-non-electronic"
       //"data/product_data/uol-book"
     )
     val suffix = (0 to 9).toList.map(_.toString)
