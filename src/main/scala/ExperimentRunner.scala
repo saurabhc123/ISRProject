@@ -53,22 +53,31 @@ object ExperimentRunner {
   }
 
   private def printMetricResults(base_dirs: Seq[String], allMetrics: List[List[List[ExperimentalMetrics]]]) = {
-    for ((dir, idx) <- base_dirs.zipWithIndex) {
-      println(s"####Experiment dir $dir####")
-      val experimentMetrics = allMetrics(idx)
-      println(s"###Per set ###")
-      for (setMetric <- experimentMetrics) {
-        println(ExperimentalMetrics.header())
-        for (met <- setMetric) {
-          println(met.toString())
+    try {
+      for ((dir, idx) <- base_dirs.zipWithIndex) {
+        println(s"####Experiment dir $dir####")
+        val experimentMetrics = allMetrics(idx)
+        println(s"###Per set ###")
+        for (setMetric <- experimentMetrics) {
+          println(ExperimentalMetrics.header())
+          for (met <- setMetric) {
+            println(met.toString())
+          }
         }
-      }
-      println(s"## ALL ##")
-      println(ExperimentalMetrics.header())
-      for (metric <- experimentMetrics.flatten) {
-        println(metric.toString())
-      }
+        println(s"## ALL ##")
+        println(ExperimentalMetrics.header())
+        for (metric <- experimentMetrics.flatten) {
+          println(metric.toString())
+        }
 
+      }
+    }
+    catch{
+      case e: Exception => {
+        println("exception")
+        e.printStackTrace()
+      }
+      }
     }
   }
 
