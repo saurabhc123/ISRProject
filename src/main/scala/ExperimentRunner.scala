@@ -18,8 +18,8 @@ object ExperimentRunner {
     // for the product datasets
     val base_dirs = Seq(
       //"data/product_data/uol-electronic"
-      "data/product_data/uol-non-electronic"
-      //"data/product_data/uol-book"
+      //"data/product_data/uol-non-electronic"
+      "data/product_data/uol-book"
     )
     val suffix = (0 to 9).toList.map(_.toString)
     
@@ -37,18 +37,18 @@ object ExperimentRunner {
     var allIDFMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs) {
       // for the product datasets
-      //val experimentalMetrics = run_w2v_experiments(dir,"/train","/test",suffix,3,sc)
-      val idfExperimentMetrics = run_idf_experiments(dir, "/train", "/test", suffix, 3, sc)
+      val experimentalMetrics = run_w2v_experiments(dir, "/train", "/test", suffix, 3, sc)
+      //val idfExperimentMetrics = run_idf_experiments(dir, "/train", "/test", suffix, 3, sc)
       // for the tweet datasets
       //val experimentalMetrics = run_w2v_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
       //val idfExperimentMetrics = run_idf_experiments(dir,"/train_data","/test_data",suffix,3,sc)
-      //allMetrics = allMetrics :+ experimentalMetrics
-      allIDFMetrics = allIDFMetrics :+ idfExperimentMetrics
+      allMetrics = allMetrics :+ experimentalMetrics
+      //allIDFMetrics = allIDFMetrics :+ idfExperimentMetrics
     }
-    //println("NOW W2V METRICS")
-    //printMetricResults(base_dirs, allMetrics)
-    println("NOW IDF METRICS")
-    printMetricResults(base_dirs, allIDFMetrics)
+    println("NOW W2V METRICS")
+    printMetricResults(base_dirs, allMetrics)
+    //println("NOW IDF METRICS")
+    //printMetricResults(base_dirs, allIDFMetrics)
 
   }
 
@@ -70,34 +70,6 @@ object ExperimentRunner {
       }
 
     }
-  }
-
-  def run_idf_experiments(dir: String, trainFile: String, testFile: String, suffixes: List[String], timesToRunEach: Int, sc: SparkContext): List[List[ExperimentalMetrics]] = {
-    var experimentSet = List[List[ExperimentalMetrics]]()
-    for (suffix <- suffixes) {
-      val trainFName = dir + trainFile + suffix
-      val testFName = dir + testFile + suffix
-      var oneSet = List[ExperimentalMetrics]()
-      for (i <- 1 to timesToRunEach) {
-        println(s"Running ${trainFName} ${testFName}")
-        val m = scala.collection.mutable.Map[String,Double]()
-        val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
-        val trainTweetsRDD = sc.parallelize(trainTweets/*, training_partitions*/)
-        val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
-        val testTweetsRDD = sc.parallelize(testTweets/*, testing_partitions*/)
-        SparkGrep.SetupWord2VecField(trainFName, trainTweets)
-        //This is how the IDF based classifier would run.
-        val (idfModel, hashingTfModel, idfLrModel, idfTrainTime) = SparkGrep.PerformIDFTraining(sc, trainTweetsRDD)
-        val (predictionIDFTweets, predictionIDFLabels) = Word2VecClassifier.predictForIDFClassifer(testTweetsRDD, sc, idfModel, hashingTfModel, idfLrModel)
-
-        val Metrics = MetricsCalculator.GenerateClassifierMetrics(predictionIDFLabels)
-        Metrics.trainTime = idfTrainTime
-        oneSet = oneSet :+ Metrics
-      }
-      experimentSet = experimentSet :+ oneSet
-
-    }
-    return experimentSet
   }
 
   private def turnOffLogging(sc: SparkContext) = {
@@ -136,5 +108,33 @@ object ExperimentRunner {
   def performPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, testTweetRdd: RDD[Tweet]): (RDD[Tweet], RDD[(Double, Double)]) = {
     val (predictionTweets, predictionLabel) = Word2VecClassifier.predict(testTweetRdd, sc, word2VecModel, logisticRegressionModel)
     (predictionTweets, predictionLabel)
+  }
+
+  def run_idf_experiments(dir: String, trainFile: String, testFile: String, suffixes: List[String], timesToRunEach: Int, sc: SparkContext): List[List[ExperimentalMetrics]] = {
+    var experimentSet = List[List[ExperimentalMetrics]]()
+    for (suffix <- suffixes) {
+      val trainFName = dir + trainFile + suffix
+      val testFName = dir + testFile + suffix
+      var oneSet = List[ExperimentalMetrics]()
+      for (i <- 1 to timesToRunEach) {
+        println(s"Running ${trainFName} ${testFName}")
+        val m = scala.collection.mutable.Map[String,Double]()
+        val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
+        val trainTweetsRDD = sc.parallelize(trainTweets, training_partitions)
+        val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
+        val testTweetsRDD = sc.parallelize(testTweets/*, testing_partitions*/)
+        SparkGrep.SetupWord2VecField(trainFName, trainTweets)
+        //This is how the IDF based classifier would run.
+        val (idfModel, hashingTfModel, idfLrModel, idfTrainTime) = SparkGrep.PerformIDFTraining(sc, trainTweetsRDD)
+        val (predictionIDFTweets, predictionIDFLabels) = Word2VecClassifier.predictForIDFClassifer(testTweetsRDD, sc, idfModel, hashingTfModel, idfLrModel)
+
+        val Metrics = MetricsCalculator.GenerateClassifierMetrics(predictionIDFLabels)
+        Metrics.trainTime = idfTrainTime
+        oneSet = oneSet :+ Metrics
+      }
+      experimentSet = experimentSet :+ oneSet
+
+    }
+    return experimentSet
   }
 }
