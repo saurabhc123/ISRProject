@@ -86,8 +86,8 @@ object SparkGrep {
         maxLab = maxLab + 1
       }
     })
-    file.map(x => x.split("; ")).filter(_.length == 3).map(x => Tweet(x(1),x(2), labelMap.get(x(0))))  ++
-        file.map(x => x.split('|')).filter(_.length == 2).map(x => Tweet(java.util.UUID.randomUUID.toString,x(1),labelMap.get(x(0))))
+    file.map(x => x.split("; ")).filter(_.length == 3).map(x => Tweet(x(1),x(2), labelMap.get(x(0)))).union(
+        file.map(x => x.split('|')).filter(_.length == 2).zipWithUniqueId().map(x => Tweet(x._2.toString,x._1(1),labelMap.get(x._1(0)))))
   }
 
    def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
