@@ -11,8 +11,8 @@ import org.apache.spark.rdd.RDD
   */
 object ExperimentRunner {
 
-  val training_partitions = 8
-  val testing_partitions = 8
+  val training_partitions = 64
+  val testing_partitions = 64
 
   def main(args: Array[String]): Unit = {
     // for the product datasets
@@ -22,6 +22,7 @@ object ExperimentRunner {
       "data/product_data/uol-book"
     )
     val suffix = (0 to 9).toList.map(_.toString)
+
     
     // for the small tweet datasets
     /*val base_dirs = Seq("data/accuracy_experiment/data")
@@ -92,6 +93,10 @@ object ExperimentRunner {
         val trainTweetsRDD = trainTweets
         val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
         val testTweetsRDD = testTweets
+        trainTweetsRDD.repartition(64)
+        testTweetsRDD.repartition(64)
+        trainTweetsRDD.cache()
+        testTweetsRDD.cache()
         SparkGrep.SetupWord2VecField(trainFName, trainTweets)
         val (word2VecModel, logisticRegressionModel, trainTime) = SparkGrep.PerformTraining(sc, trainTweetsRDD)
         val (predictionTweets, predictionLabel) = performPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
