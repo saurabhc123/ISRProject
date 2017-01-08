@@ -120,9 +120,9 @@ object ExperimentRunner {
         println(s"Running ${trainFName} ${testFName}")
         val m = scala.collection.mutable.Map[String,Double]()
         val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
-        val trainTweetsRDD = sc.parallelize(trainTweets, training_partitions)
+        val trainTweetsRDD = trainTweets
         val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
-        val testTweetsRDD = sc.parallelize(testTweets/*, testing_partitions*/)
+        val testTweetsRDD = testTweets
         SparkGrep.SetupWord2VecField(trainFName, trainTweets)
         //This is how the IDF based classifier would run.
         val (idfModel, hashingTfModel, idfLrModel, idfTrainTime) = SparkGrep.PerformIDFTraining(sc, trainTweetsRDD)
