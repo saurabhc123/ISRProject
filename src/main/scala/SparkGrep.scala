@@ -54,11 +54,11 @@ object SparkGrep {
     var labelMap = scala.collection.mutable.Map[String,Double]()
     val training_partitions = 8
     val testing_partitions = 8
-    val trainTweets = getTweetsFromFile(trainFile, labelMap, sc)
-    val testTweets = getTweetsFromFile(testFile, labelMap, sc)
+    val trainTweets = getTweetsFromFile(trainFile, labelMap, sc).collect()
+    val testTweets = getTweetsFromFile(testFile, labelMap, sc).collect()
 
     DataStatistics(trainTweets, testTweets)
-    SetupWord2VecField(trainFile, trainTweets)
+    SetupWord2VecField(trainFile, getTweetsFromFile(trainFile, labelMap, sc))
 
     val trainTweetsRDD = sc.parallelize(trainTweets, training_partitions)
     //val cleaned_trainingTweetsRDD = sc.parallelize(CleanTweet.clean(trainTweetsRDD,sc).collect(),training_partitions).cache()
@@ -72,7 +72,7 @@ object SparkGrep {
 
   }
 
-  def getTweetsFromFile(fileName:String,labelMap:scala.collection.mutable.Map[String,Double], sc: SparkContext): Array[Tweet] = {
+  def getTweetsFromFile(fileName:String,labelMap:scala.collection.mutable.Map[String,Double], sc: SparkContext): RDD[Tweet] = {
     val file = sc.textFile(fileName)
     val allProductNum = file.map(x => x.split("; ")).filter(_.length == 3).map(x => x(0)).distinct().collect() ++
       file.map(x => x.split('|')).filter(_.length == 2).map(x => x(0)).collect()
@@ -86,8 +86,8 @@ object SparkGrep {
         maxLab = maxLab + 1
       }
     })
-    file.map(x => x.split("; ")).filter(_.length == 3).map(x => Tweet(x(1),x(2), labelMap.get(x(0)))).collect()  ++
-        file.map(x => x.split('|')).filter(_.length == 2).map(x => Tweet(java.util.UUID.randomUUID.toString,x(1),labelMap.get(x(0)))).collect()
+    file.map(x => x.split("; ")).filter(_.length == 3).map(x => Tweet(x(1),x(2), labelMap.get(x(0))))  ++
+        file.map(x => x.split('|')).filter(_.length == 2).map(x => Tweet(java.util.UUID.randomUUID.toString,x(1),labelMap.get(x(0))))
   }
 
    def PerformPrediction(sc: SparkContext, word2VecModel: Word2VecModel, logisticRegressionModel: LogisticRegressionModel, cleaned_testTweetsRDD: RDD[Tweet]) = {
@@ -107,10 +107,10 @@ object SparkGrep {
     (word2VecModel, logisticRegressionModel, (trainend-trainstart)/1000.0)
   }
 
-  def SetupWord2VecField(trainFile: String, trainTweets: Array[Tweet]): Unit = {
+  def SetupWord2VecField(trainFile: String, trainTweets: RDD[Tweet]): Unit = {
     Word2VecClassifier._lrModelFilename = trainFile + "lrModel"
     Word2VecClassifier._word2VecModelFilename = trainFile + "w2vModel"
-    Word2VecClassifier._numberOfClasses = trainTweets.map(x => x.label).distinct.length
+    Word2VecClassifier._numberOfClasses =  trainTweets.map(x => x.label).distinct.count().toInt
   }
 
   private def DataStatistics(trainTweets: Array[Tweet], testTweets: Array[Tweet]) = {
