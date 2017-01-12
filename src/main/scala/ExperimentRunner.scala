@@ -19,9 +19,10 @@ object ExperimentRunner {
     val base_dirs = Seq(
       //"data/product_data/uol-electronic"
       //"data/product_data/uol-non-electronic"
-      "data/product_data/uol-book"
+      //"data/product_data/uol-book"
+      "data/mega_set/"
     )
-    val suffix = (0 to 9).toList.map(_.toString)
+    val suffix = Seq(3,6,9,20,40,80,160,320,640,1000,1200,1500,1800,2000).toList.map(_.toString)
 
     
     // for the small tweet datasets
@@ -38,7 +39,7 @@ object ExperimentRunner {
     var allIDFMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs) {
       // for the product datasets
-      val experimentalMetrics = run_w2v_experiments(dir, "/train", "/test", suffix, 3, sc)
+      val experimentalMetrics = run_w2v_experiments(dir, "train_set.ar", "test_set.ar.out", suffix, 3, sc)
       //val idfExperimentMetrics = run_idf_experiments(dir, "/train", "/test", suffix, 3, sc)
       // for the tweet datasets
       //val experimentalMetrics = run_w2v_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
