@@ -6,6 +6,8 @@ import org.apache.spark.rdd.RDD
   * Created by Eric on 12/23/2016.
   */
 class ExperimentalMetrics(multiclassMetrics: MulticlassMetrics, multilabelMetrics: MultilabelMetrics){
+  var predictTime = 0.0
+
   val multiClassMetrics:MulticlassMetrics = multiclassMetrics
   val multiLabelMetrics:MultilabelMetrics = multilabelMetrics
   val weightedF1:Double = multiClassMetrics.weightedFMeasure
@@ -20,12 +22,12 @@ class ExperimentalMetrics(multiclassMetrics: MulticlassMetrics, multilabelMetric
 
 
   override def toString: String = {
-    return s"$microF1,$macroF1,$trainTime,$weightedPrecision,$weightedRecall,$weightedF1"
+    return s"$microF1,$macroF1,$trainTime,$weightedPrecision,$weightedRecall,$weightedF1,$predictTime"
   }
 }
 object ExperimentalMetrics{
   def header(): String = {
-    val header = "Micro F1,Macro F1,Train Time(Seconds),Weighted Precision,Weighted Recall,Weighted F1"
+    val header = "Micro F1,Macro F1,Train Time(Seconds),Weighted Precision,Weighted Recall,Weighted F1,Prediction Time(Seconds)"
     header
   }
 }

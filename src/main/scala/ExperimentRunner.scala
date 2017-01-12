@@ -83,7 +83,7 @@ object ExperimentRunner {
   def run_w2v_experiments(dir: String, trainFile: String, testFile: String, suffixes: List[String], timesToRunEach: Int, sc: SparkContext): List[List[ExperimentalMetrics]] = {
     var experimentSet = List[List[ExperimentalMetrics]]()
     for (suffix <- suffixes) {
-      val trainFName = dir + trainFile + suffix
+      val trainFName = dir + trainFile
       val testFName = dir + testFile + suffix
       var oneSet = List[ExperimentalMetrics]()
       for (i <- 1 to timesToRunEach) {
@@ -99,9 +99,14 @@ object ExperimentRunner {
         testTweetsRDD.cache()
         SparkGrep.SetupWord2VecField(trainFName, trainTweets)
         val (word2VecModel, logisticRegressionModel, trainTime) = SparkGrep.PerformTraining(sc, trainTweetsRDD)
+        val predictstart = System.currentTimeMillis()
         val (predictionTweets, predictionLabel) = performPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
+        val predicted_tweets = predictionTweets.collect()
+        val predict_stop = System.currentTimeMillis()
+        val predictTime = (predict_stop-predictstart)/1000.0
         val Metrics = MetricsCalculator.GenerateClassifierMetrics(predictionLabel)
         Metrics.trainTime = trainTime
+        Metrics.predictTime = predictTime
         oneSet = oneSet :+ Metrics
       }
       experimentSet = experimentSet :+ oneSet
