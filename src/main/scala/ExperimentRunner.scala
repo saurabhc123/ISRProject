@@ -17,12 +17,12 @@ object ExperimentRunner {
   def main(args: Array[String]): Unit = {
     // for the product datasets
     val base_dirs = Seq(
-      //"data/product_data/uol-electronic"
+      "data/product_data/uol-electronic"
       //"data/product_data/uol-non-electronic"
       //"data/product_data/uol-book"
-      "data/mega_set/"
+      //"data/mega_set/"
     )
-    val suffix = Seq(50,100,200,400,800,1000,1200,1400,1600,1800,2000).toList.map(_.toString)
+    val suffix = Seq(1).toList.map(_.toString)
 
     
     // for the small tweet datasets
@@ -39,7 +39,7 @@ object ExperimentRunner {
     var allIDFMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs) {
       // for the product datasets
-      val experimentalMetrics = run_w2v_experiments(dir, "train_set.ar", "test_set.ar.out", suffix, 3, sc)
+      val experimentalMetrics = run_w2v_experiments(dir, "/train", "/test", suffix, 1, sc)
       //val idfExperimentMetrics = run_idf_experiments(dir, "/train", "/test", suffix, 3, sc)
       // for the tweet datasets
       //val experimentalMetrics = run_w2v_experiments(dir, "/train_data", "/test_data", suffix, 3, sc)
@@ -84,7 +84,7 @@ object ExperimentRunner {
   def run_w2v_experiments(dir: String, trainFile: String, testFile: String, suffixes: List[String], timesToRunEach: Int, sc: SparkContext): List[List[ExperimentalMetrics]] = {
     var experimentSet = List[List[ExperimentalMetrics]]()
     for (suffix <- suffixes) {
-      val trainFName = dir + trainFile
+      val trainFName = dir + trainFile + suffix
       val testFName = dir + testFile + suffix
       var oneSet = List[ExperimentalMetrics]()
       for (i <- 1 to timesToRunEach) {
