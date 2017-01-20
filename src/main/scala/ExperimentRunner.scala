@@ -22,7 +22,7 @@ object ExperimentRunner {
       //"data/product_data/uol-book"
       //"data/mega_set/"
     )
-    val suffix = (1).toList.map(_.toString)
+    val suffix = Seq(1).toList.map(_.toString)
 
     
     // for the small tweet datasets
