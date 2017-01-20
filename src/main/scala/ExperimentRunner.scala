@@ -90,11 +90,11 @@ object ExperimentRunner {
       for (i <- 1 to timesToRunEach) {
         println(s"Running ${trainFName} ${testFName}")
         val m = scala.collection.mutable.Map[String,Double]()
-        val trainTweetsRDD = SparkGrep.getTweetsFromFile(trainFName, m, sc) //.repartition(64)
+        val trainTweetsRDD = SparkGrep.getTweetsFromFile(trainFName, m, sc).repartition(64)
 
-        val testTweetsRDD = SparkGrep.getTweetsFromFile(testFName, m, sc)
-        trainTweetsRDD.repartition(64)
-        testTweetsRDD.repartition(64)
+        val testTweetsRDD = SparkGrep.getTweetsFromFile(testFName, m, sc).repartition(64)
+        //trainTweetsRDD.repartition(64)
+        //testTweetsRDD.repartition(64)
         trainTweetsRDD.cache()
         testTweetsRDD.cache()
         SparkGrep.SetupWord2VecField(trainFName, trainTweetsRDD)
