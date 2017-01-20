@@ -132,25 +132,6 @@ object Word2VecClassifier{
     return (tweetText, wordFeatures)
   }
 
-  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
-  : LogisticRegressionModel = {
-
-    /*val foldCount = 10
-    //Break the trainingData into n-folds
-    for (i <- 1 to foldCount) {
-      val setSize = trainingData.count()
-      val subTrainData = trainingData.fo
-
-    }*/
-    val lrClassifier = new LogisticRegressionWithLBFGS()
-    //lrClassifier.optimizer.setConvergenceTol(0.01)
-    lrClassifier.optimizer.setNumIterations(75)
-
-    lrClassifier
-      .setNumClasses(bcNumberOfClasses)
-      .run(trainingData)
-  }
-
   def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): (RDD[Tweet], RDD[(Double, Double)]) = {
     //val sc = new SparkContext()
 
@@ -458,6 +439,25 @@ object Word2VecClassifier{
       //val eric = logisticRegressionPredictions.filter(p => p._3.max > 0.5)
       (logisticRegressionPredictions.map(pred => (if (pred._3.max == pred._3(pred._1.toInt) && pred._3(pred._1.toInt) > _threshold) pred._1 else 0.0, pred._2)), start)
     }
+
+  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
+  : LogisticRegressionModel = {
+
+    /*val foldCount = 10
+    //Break the trainingData into n-folds
+    for (i <- 1 to foldCount) {
+      val setSize = trainingData.count()
+      val subTrainData = trainingData.fo
+
+    }*/
+    val lrClassifier = new LogisticRegressionWithLBFGS()
+    lrClassifier.optimizer.setConvergenceTol(0.01)
+    //lrClassifier.optimizer.setNumIterations(75)
+
+    lrClassifier
+      .setNumClasses(bcNumberOfClasses)
+      .run(trainingData)
+  }
 
   def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)]
                                 ,classifierType : String,
