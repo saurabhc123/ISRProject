@@ -90,15 +90,14 @@ object ExperimentRunner {
       for (i <- 1 to timesToRunEach) {
         println(s"Running ${trainFName} ${testFName}")
         val m = scala.collection.mutable.Map[String,Double]()
-        val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
-        val trainTweetsRDD = trainTweets
-        val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
-        val testTweetsRDD = testTweets
+        val trainTweetsRDD = SparkGrep.getTweetsFromFile(trainFName, m, sc) //.repartition(64)
+
+        val testTweetsRDD = SparkGrep.getTweetsFromFile(testFName, m, sc)
         trainTweetsRDD.repartition(64)
         testTweetsRDD.repartition(64)
         trainTweetsRDD.cache()
         testTweetsRDD.cache()
-        SparkGrep.SetupWord2VecField(trainFName, trainTweets)
+        SparkGrep.SetupWord2VecField(trainFName, trainTweetsRDD)
         val (word2VecModel, logisticRegressionModel, trainTime) = SparkGrep.PerformTraining(sc, trainTweetsRDD)
         val predictstart = System.currentTimeMillis()
         val (predictionTweets, predictionLabel) = performPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
