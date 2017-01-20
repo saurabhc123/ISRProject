@@ -132,25 +132,6 @@ object Word2VecClassifier{
     return (tweetText, wordFeatures)
   }
 
-  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
-  : LogisticRegressionModel = {
-
-    /*val foldCount = 10
-    //Break the trainingData into n-folds
-    for (i <- 1 to foldCount) {
-      val setSize = trainingData.count()
-      val subTrainData = trainingData.fo
-
-    }*/
-    val lrClassifier = new LogisticRegressionWithLBFGS()
-    //lrClassifier.optimizer.setConvergenceTol(0.01)
-    //lrClassifier.optimizer.setNumIterations(50)
-
-    lrClassifier
-      .setNumClasses(bcNumberOfClasses)
-      .run(trainingData)
-  }
-
   def predict(tweets: RDD[Tweet], sc: SparkContext, w2vModel: Word2VecModel, lrModel: LogisticRegressionModel): (RDD[Tweet], RDD[(Double, Double)]) = {
     //val sc = new SparkContext()
 
@@ -182,32 +163,32 @@ object Word2VecClassifier{
 
     val wordOnlyTestSample = cleanTestTweets map wordOnlySample
     val samplePairsTest = wordOnlyTestSample.map(s => s.id -> s)
-    val reviewWordsPairsTest : RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
+    val reviewWordsPairsTest: RDD[(String, Iterable[String])] = samplePairsTest.mapValues(_.tweetText.split(" ").toIterable)
     val wordFeaturePairTest = reviewWordsPairsTest mapValues wordFeatures
     val inter2Test = wordFeaturePairTest.filter(!_._2.isEmpty)
     val avgWordFeaturesPairTest = inter2Test mapValues avgWordFeatures
     val featuresPairTest = avgWordFeaturesPairTest join samplePairsTest mapValues {
-      case (features, Tweet(id, tweetText, label)) => (Tweet(id,tweetText,label), features)
+      case (features, Tweet(id, tweetText, label)) => (Tweet(id, tweetText, label), features)
     }
     val testSet = featuresPairTest.values
 
 
 
-    val logisticRegressionModel =  lrModel //LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
+    val logisticRegressionModel = lrModel //LogisticRegressionModel.load(sc, bcLRClassifierModelFilename.value)
     //println(s"Classifier Model file found:$bcLRClassifierModelFilename. Loading model.")
 
     val start = System.currentTimeMillis()
-    val logisticRegressionPredictions = testSet.map { case (Tweet(id,tweetText,label), features) =>
+    val logisticRegressionPredictions = testSet.map { case (Tweet(id, tweetText, label), features) =>
       val prediction = logisticRegressionModel.predict(features)
-      Tweet(id,tweetText,Option(prediction))
+      Tweet(id, tweetText, Option(prediction))
     }
-    val logisticRegressionPredLabel = testSet.map { case (Tweet(id,tweetText,label), features) =>
+    val logisticRegressionPredLabel = testSet.map { case (Tweet(id, tweetText, label), features) =>
       val prediction = logisticRegressionModel.predict(features)
-      (prediction,label.getOrElse(9999999999.0))
+      (prediction, label.getOrElse(9999999999.0))
     }
     println("<---- done")
     val end = System.currentTimeMillis()
-    println(s"Took ${(end-start)/1000.0} seconds for Prediction.")
+    println(s"Took ${(end - start) / 1000.0} seconds for Prediction.")
 
     return (logisticRegressionPredictions, logisticRegressionPredLabel)
   }
@@ -458,6 +439,25 @@ object Word2VecClassifier{
       //val eric = logisticRegressionPredictions.filter(p => p._3.max > 0.5)
       (logisticRegressionPredictions.map(pred => (if (pred._3.max == pred._3(pred._1.toInt) && pred._3(pred._1.toInt) > _threshold) pred._1 else 0.0, pred._2)), start)
     }
+
+  def GenerateOptimizedModel(trainingData: RDD[LabeledPoint], bcNumberOfClasses: Int)
+  : LogisticRegressionModel = {
+
+    /*val foldCount = 10
+    //Break the trainingData into n-folds
+    for (i <- 1 to foldCount) {
+      val setSize = trainingData.count()
+      val subTrainData = trainingData.fo
+
+    }*/
+    val lrClassifier = new LogisticRegressionWithLBFGS()
+    lrClassifier.optimizer.setConvergenceTol(0.01)
+    lrClassifier.optimizer.setNumIterations(50)
+
+    lrClassifier
+      .setNumClasses(bcNumberOfClasses)
+      .run(trainingData)
+  }
 
   def GenerateClassifierMetrics(predictionAndLabels: RDD[(Double, Double)]
                                 ,classifierType : String,
