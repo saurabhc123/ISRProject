@@ -1,6 +1,6 @@
 import isr.project.{SparkGrep, Tweet}
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.classification.LogisticRegressionModel
 import org.apache.spark.mllib.feature.Word2VecModel
 import org.apache.spark.mllib.linalg.Word2VecClassifier
@@ -29,12 +29,13 @@ object ExperimentRunner {
     /*val base_dirs = Seq("data/accuracy_experiment/data")
     val suffix = (2 to 10).toList.map(_.toString + ".rw")*/
 
-    /*val conf = new SparkConf()
+    // if running local we must set a have this uncommented, on the cluster we want the other sc
+    val conf = new SparkConf()
       .setMaster("local[*]")
       .setAppName("ExperimentOrchestration")
-    val sc = new SparkContext(conf)*/
-    val sc = new SparkContext()
-    turnOffLogging(sc)
+    val sc = new SparkContext(conf)
+    //val sc = new SparkContext()
+    //turnOffLogging(sc)
     var allMetrics = List[List[List[ExperimentalMetrics]]]()
     var allIDFMetrics = List[List[List[ExperimentalMetrics]]]()
     for (dir <- base_dirs) {
