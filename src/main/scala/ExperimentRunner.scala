@@ -24,7 +24,7 @@ object ExperimentRunner {
     )
     val suffix = Seq(1).toList.map(_.toString)
 
-    
+
     // for the small tweet datasets
     /*val base_dirs = Seq("data/accuracy_experiment/data")
     val suffix = (2 to 10).toList.map(_.toString + ".rw")*/
@@ -74,12 +74,10 @@ object ExperimentRunner {
 
       }
     }
-    catch{
-      case e: Exception => {
+    catch {
+      case e: Exception =>
         println("exception")
         e.printStackTrace()
-      }
-      }
     }
   }
 
@@ -98,7 +96,7 @@ object ExperimentRunner {
       var oneSet = List[ExperimentalMetrics]()
       for (i <- 1 to timesToRunEach) {
         println(s"Running ${trainFName} ${testFName}")
-        val m = scala.collection.mutable.Map[String,Double]()
+        val m = scala.collection.mutable.Map[String, Double]()
         val trainTweetsRDD = SparkGrep.getTweetsFromFile(trainFName, m, sc).cache().repartition(64)
 
         val testTweetsRDD = SparkGrep.getTweetsFromFile(testFName, m, sc).cache().repartition(64)
@@ -112,7 +110,7 @@ object ExperimentRunner {
         val (predictionTweets, predictionLabel) = performPrediction(sc, word2VecModel, logisticRegressionModel, testTweetsRDD)
         val predicted_tweets = predictionTweets.collect()
         val predict_stop = System.currentTimeMillis()
-        val predictTime = (predict_stop-predictstart)/1000.0
+        val predictTime = (predict_stop - predictstart) / 1000.0
         val Metrics = MetricsCalculator.GenerateClassifierMetrics(predictionLabel)
         Metrics.trainTime = trainTime
         Metrics.predictTime = predictTime
@@ -137,7 +135,7 @@ object ExperimentRunner {
       var oneSet = List[ExperimentalMetrics]()
       for (i <- 1 to timesToRunEach) {
         println(s"Running ${trainFName} ${testFName}")
-        val m = scala.collection.mutable.Map[String,Double]()
+        val m = scala.collection.mutable.Map[String, Double]()
         val trainTweets = SparkGrep.getTweetsFromFile(trainFName, m, sc)
         val trainTweetsRDD = trainTweets
         val testTweets = SparkGrep.getTweetsFromFile(testFName, m, sc)
@@ -156,4 +154,5 @@ object ExperimentRunner {
     }
     return experimentSet
   }
+
 }
