@@ -69,7 +69,7 @@ object ExperimentRunner {
         }
         println(s"## ALL ##")
         println(ExperimentalMetrics.header())
-        for (metric <- allMetrics.flatten.flatten) {
+        for (metric <- experimentMetrics.flatten) {
           println(metric.toString())
         }
 
